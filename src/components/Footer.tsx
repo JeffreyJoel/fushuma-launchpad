@@ -100,7 +100,7 @@ export default function Footer() {
               <div className="flex flex-col gap-2.5 font-medium">
                 {group.links.map((link) => {
                   if (link.url) {
-                    return <a className="duration-200 hover:text-red" target="_blank" href={link.url}
+                    return <a className="duration-200 text-red hover:text-primary-text font-normal dark:hover:text-beige" target="_blank" href={link.url}
                               key={link.label}>{t(link.label)}</a>
                   }
 

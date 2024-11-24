@@ -23,7 +23,7 @@ export default function HeaderNav() {
            
               <a
                 target="_blank"
-                className="px-1.5 font-medium text-primary-text flex items-center gap-1 duration-200 hover:text-red"
+                className="px-1.5 font-medium text-red flex items-center gap-1 duration-200 hover:text-primary-text"
                 href={link.url}
               >
                 {link.title}
