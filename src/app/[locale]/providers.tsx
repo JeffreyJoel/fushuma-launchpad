@@ -12,7 +12,7 @@ import { modal, wagmiAdapter, config } from '@/connection'
 
 type Props = {
   children: ReactNode,
-  initialState: State | undefined,
+  initialState?: State | undefined,
   messages: AbstractIntlMessages | undefined,
   locale: Locale
 }
@@ -20,9 +20,9 @@ type Props = {
 const queryClient = new QueryClient()
 const timeZone = 'Europe/Vienna';
 
-export function Providers({ children, initialState, messages, locale }: Props) {
+export function Providers({ children,  messages, locale }: Props) {
   return (
-    <WagmiProvider config={config} initialState={initialState}>
+    <WagmiProvider config={config} >
       <QueryClientProvider client={queryClient}>
         <NextIntlClientProvider locale={locale} timeZone={timeZone} messages={messages}>
           <ThemeProvider attribute="class">

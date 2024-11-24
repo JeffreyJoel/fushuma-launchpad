@@ -15,13 +15,15 @@
         --green: 109 163 22;
         --violet: 113 106 197;
         --pink: 202 125 239;
-        --red: 205 21 21;
+        --red: 206 31 46;
         --orange: 237 150 47;
         --blue: 47 128 237;
+        --beige: 228 208 175;
 
         --green-saturated: 88 141 0;
+        --red-light: 231 41 57;
 
-        --primary-hover: 113 172 15;
+        --primary-hover: 206 31 46;
         --secondary-hover: 226 226 226;
 
         --active-border: 173 181 176;
@@ -41,14 +43,16 @@
         --green: 124 184 25;
         --violet: 113 106 197;
         --pink: 202 125 239;
-        --red: 173 19 19;
+        --red: 206 31 46;
         --orange: 232 139 31;
         --blue: 26 112 228;
+        --beige: 228 208 175;
 
         --green-saturated: 88 141 0;
         --grey-light: 120 120 120;
+        --red-light: 231 41 57;
 
-        --primary-hover: 113 172 15;
+        --primary-hover: 206 31 46;
         --secondary-hover: 88 88 88;
     }
 }

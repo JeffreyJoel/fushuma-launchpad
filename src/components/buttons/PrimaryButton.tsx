@@ -13,7 +13,7 @@ export default function PrimaryButton({variant = "contained", fullWidth = false,
     px-6
     font-medium
     border
-    border-green
+    border-red
     duration-200
     flex
     items-center
@@ -23,7 +23,7 @@ export default function PrimaryButton({variant = "contained", fullWidth = false,
     disabled:text-grey-light
     disabled:border-grey-light
     ${variant === "contained" 
-      ? "text-white bg-green hover:bg-primary-hover hover:border-primary-hover" 
+      ? "text-white bg-red hover:bg-red-light hover:border-bg-red-light" 
       : "text-primary-text bg-transparent hover:bg-green/20"}
     ${fullWidth && "w-full"}
     ${loading && "pointer-events-none"}      

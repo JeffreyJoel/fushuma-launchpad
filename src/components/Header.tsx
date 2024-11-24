@@ -43,25 +43,10 @@ export default function Header() {
             <SettingsMenu/>
 
             <ConnectButton/>
-            {/* {isConnected
-              ? <>
-                <ChangeNetworkMenu/>
-                <WalletMenu pending={pending}/>
-              </>
-              : <PrimaryButton onClick={() => setIsOpened(true)}>{navT("connect_wallet")}</PrimaryButton>} */}
           </div>
           <MobileMenu />
 
         </div>
-        {/* <div
-          className="fixed bottom-0 left-0 right-0 bg-primary-bg border-t border-primary-border p-2.5 z-50 md:hidden">
-          {isConnected
-            ? <div className="grid grid-cols-2 gap-2.5">
-              <ChangeNetworkMenu/>
-              <WalletMenu pending={pending}/>
-            </div>
-            : <PrimaryButton fullWidth onClick={() => setIsOpened(true)}>{navT("connect_wallet")}</PrimaryButton>}
-        </div> */}
       </div>
     </header>
   </Container>

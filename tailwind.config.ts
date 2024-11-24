@@ -90,9 +90,11 @@ const config: Config = {
       'blue': 'rgb(var(--blue) / <alpha-value>)',
       'black': '#000000',
       'white': "#FFFFFF",
+      'beige': "rgb(var(--beige) / <alpha-value>)",
 
       'green-saturated': 'rgb(var(--green-saturated) / <alpha-value>)',
       'grey-light': 'rgb(var(--grey-light) / <alpha-value>)',
+      'red-light': 'rgb(var(--red-light) / <alpha-value>)',
 
       'primary-hover': 'rgb(var(--primary-hover) / <alpha-value>)',
       'secondary-hover': 'rgb(var(--secondary-hover) / <alpha-value>)'

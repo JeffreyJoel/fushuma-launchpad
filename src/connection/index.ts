@@ -1,4 +1,3 @@
-// config/index.ts
 import { createAppKit } from '@reown/appkit'
 import { SolanaAdapter } from '@reown/appkit-adapter-solana'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
@@ -50,7 +49,7 @@ export const metadata = {
 // Create and export AppKit instance
 export const modal = createAppKit({
   adapters: [wagmiAdapter, solanaAdapter],
-  networks: [bsc, bscTestnet, polygon, polygonAmoy, solana, solanaTestnet, solanaDevnet],
+  networks: [bsc, polygon, solana, solanaDevnet,solanaTestnet],
   metadata: metadata,
   projectId,
   featuredWalletIds:[

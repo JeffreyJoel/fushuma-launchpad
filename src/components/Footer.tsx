@@ -3,71 +3,47 @@ import Container from "@/components/atoms/Container";
 import { IconName } from "@/config/types/IconName";
 import SocialIconButton from "@/components/buttons/SocialIconLink";
 import ThemedLogo from "@/components/ThemedLogo";
-import { useSOYPrice } from "@/hooks/useCLOPrice";
 import { useTranslations } from "use-intl";
 
 type FooterLink = {
-  label: "telegram" | "tokenomics" |"documentation" |"token_audits" |"token_standard" |"slothTV" |"github" |"team",
+  label: "telegram"  |"zeeve" |"fushuma_roadmap" |"fuma_tokenomics" | "blog",
   url: string | null
 }
 
-export const supportLinks: FooterLink[] = [
+export const Links: FooterLink[] = [
   {
-    label: "telegram",
+    label: "fushuma_roadmap",
     url: "https://t.me/Soy_Finance"
   },
   {
-    label: "tokenomics",
+    label: "fuma_tokenomics",
     url: "https://docs.soy.finance/soy-products/soy-token/monetary-policy-vision"
   },
   {
-    label: "documentation",
+    label: "blog",
     url: "https://docs.soy.finance/"
   }
 ];
 
-export const tradingLinks: FooterLink[] = [
+export const technicalPartners: FooterLink[] = [
   {
-    label: "token_audits",
-    url: "https://docs.soy.finance/soy-products/safelistings/projects-safelisted"
+    label: "zeeve",
+    url: "https://www.zeeve.io/"
   },
-  {
-    label: "token_standard",
-    url: "https://docs.soy.finance/soy-products/safety-on-yields/erc-223-token-standard"
-  }
-];
-
-export const engageLinks: FooterLink[] = [
-  {
-    label: "slothTV",
-    url: "https://www.youtube.com/watch?v=vbtED4Z_82I&list=PLY-khVKjGjWgLeiBI3Y3jP5nIrqpoEkRK"
-  },
-  {
-    label: "github",
-    url: "https://github.com/CallistoEnterprise"
-  },
-  {
-    label: "team",
-    url: "https://docs.soy.finance/miscellaneous/callisto-enterprise-team"
-  }
 ];
 
 export const footerLinks: {
-  groupLabel: "support" | "safe_trading" | "engage",
+  groupLabel: "links" | "technical_partners",
   links: FooterLink[]
 }[] = [
   {
-    groupLabel: "support",
-    links: supportLinks
+    groupLabel: "links",
+    links: Links
   },
   {
-    groupLabel: "safe_trading",
-    links: tradingLinks
+    groupLabel: "technical_partners",
+    links: technicalPartners
   },
-  {
-    groupLabel: "engage",
-    links: engageLinks
-  }
 ]
 
 export const socialLinks: Array<{
@@ -76,42 +52,25 @@ export const socialLinks: Array<{
 }> = [
   {
     icon: "twitter",
-    link: "https://twitter.com/SoyFinance"
+    link: "https://twitter.com/FushumaChain"
   },
   {
     icon: "telegram",
-    link: "https://t.me/Soy_Finance"
+    link: "https://t.me/FushumaChain"
   },
   {
     icon: "reddit",
-    link: "https://www.reddit.com/r/Soy_Finance/"
+    link: "https://reddit.com/r/Fushuma"
   },
   {
     icon: "facebook",
-    link: "https://www.facebook.com/Soy.Finance"
+    link: "https://www.facebook.com/FushumaChain"
   },
-  {
-    icon: "defilama",
-    link: "https://defillama.com/protocol/soy-finance"
-  },
-  {
-    icon: "coingecko",
-    link: "https://www.geckoterminal.com/callisto/soy-finance-callisto/pools"
-  },
-  {
-    icon: "coinmarketcup",
-    link: "https://coinmarketcap.com/currencies/soy-finance/"
-  },
-  {
-    icon: "coinpaprika",
-    link: "https://coinpaprika.com/coin/soy-soy-finance/"
-  }
 ];
 
 
 
 export default function Footer() {
-  const soyPrice = useSOYPrice();
 
   const t = useTranslations("Footer");
 
@@ -125,10 +84,6 @@ export default function Footer() {
 
           <span className="text-16 text-secondary-text font-medium">{t("be_lazy")}</span>
           <div className="flex gap-2.5 my-5">
-            <div className="flex items-center h-10 px-2.5 border border-primary-border rounded-2 gap-0.5">
-              <img src="/images/all-tokens/SOY-TRANSPARENT.svg" alt=""/>
-              <span className="text-primary-text text-16 font-medium">1 SOY = ${soyPrice ? soyPrice.toFixed(5) : "Loading..."}</span>
-            </div>
           </div>
           <div className="flex items-center gap-2.5 flex-wrap">
             {socialLinks.map((item, index) => {
@@ -145,11 +100,11 @@ export default function Footer() {
               <div className="flex flex-col gap-2.5 font-medium">
                 {group.links.map((link) => {
                   if (link.url) {
-                    return <a className="duration-200 hover:text-green" target="_blank" href={link.url}
+                    return <a className="duration-200 hover:text-red" target="_blank" href={link.url}
                               key={link.label}>{t(link.label)}</a>
                   }
 
-                  return <a className="duration-200 hover:text-green" onClick={(e) => {
+                  return <a className="duration-200 hover:text-red" onClick={(e) => {
                     e.preventDefault();
                     // showMessage("Coming soon...", "info");
                   }} href="" key={link.label}>{t(link.label)}</a>

@@ -12,10 +12,11 @@ export default function SocialIconButton({ icon, ...props }: Props) {
     h-10
     rounded-full
     border
-    border-green
+    border-[#e4d0af]
     bg-transparent
+    hover:bg-[#e4d0af]
     text-secondary-text
-    hover:text-green
+    hover:text-red
     flex
     items-center
     justify-center
