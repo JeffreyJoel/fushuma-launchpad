@@ -13,15 +13,15 @@ type FooterLink = {
 export const Links: FooterLink[] = [
   {
     label: "fushuma_roadmap",
-    url: "https://t.me/Soy_Finance"
+    url: ""
   },
   {
     label: "fuma_tokenomics",
-    url: "https://docs.soy.finance/soy-products/soy-token/monetary-policy-vision"
+    url: "https://fushuma.com/fuma-tokenomics"
   },
   {
     label: "blog",
-    url: "https://docs.soy.finance/"
+    url: "https://fushuma.com/dojo/"
   }
 ];
 
