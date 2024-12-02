@@ -699,7 +699,7 @@ function Details({ children, onClick }: Props) {
 
   // The click event of "Buy" btn (place the integration here)
   const buyTokens = useCallback(async () => {
-    if (!walletClient || !address || !chainId || !balanceValue?.value) {
+    if (!walletClient || !address || !chainId || !balanceValue?.value || !publicClient) {
       return;
     }
 
@@ -855,7 +855,7 @@ function Details({ children, onClick }: Props) {
   };
 
   const claimVesting = useCallback(async () => {
-    if (!walletClient || !address || !chainId) {
+    if (!walletClient || !address || !chainId || !publicClient) {
       return;
     }
 
