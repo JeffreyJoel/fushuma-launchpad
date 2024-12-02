@@ -21,15 +21,15 @@ export default function Switch({ checked, setChecked, small = false, disabled = 
                       top-0
                       bottom-0
                       duration-200
-                      peer-checked:border-green
-                      peer-checked:bg-green/20
+                      peer-checked:border-red
+                      peer-checked:bg-red/20
                       border-active-border
                       border
                       rounded-5
-                      peer-checked:before:bg-green
+                      peer-checked:before:bg-red
                       peer-checked:before:translate-x-6
-                      hover:before:bg-green
-                      hover:border-green
+                      hover:before:bg-red
+                      hover:border-red
                       before:content-['']
                       before:absolute
                       before:top-[3px]

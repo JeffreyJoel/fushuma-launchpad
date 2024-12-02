@@ -81,8 +81,6 @@ export default function Footer() {
           <div className="mb-[14px]">
             <ThemedLogo/>
           </div>
-
-          <span className="text-16 text-secondary-text font-medium">{t("be_lazy")}</span>
           <div className="flex gap-2.5 my-5">
           </div>
           <div className="flex items-center gap-2.5 flex-wrap">
@@ -100,11 +98,11 @@ export default function Footer() {
               <div className="flex flex-col gap-2.5 font-medium">
                 {group.links.map((link) => {
                   if (link.url) {
-                    return <a className="duration-200 hover:text-red" target="_blank" href={link.url}
+                    return <a className="duration-200 text-secondary-text hover:text-red" target="_blank" href={link.url}
                               key={link.label}>{t(link.label)}</a>
                   }
 
-                  return <a className="duration-200 hover:text-red" onClick={(e) => {
+                  return <a className="duration-200 text-secondary-text hover:text-red" onClick={(e) => {
                     e.preventDefault();
                     // showMessage("Coming soon...", "info");
                   }} href="" key={link.label}>{t(link.label)}</a>

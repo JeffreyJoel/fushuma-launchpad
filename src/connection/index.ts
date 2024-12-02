@@ -49,7 +49,7 @@ export const metadata = {
 // Create and export AppKit instance
 export const modal = createAppKit({
   adapters: [wagmiAdapter, solanaAdapter],
-  networks: [bsc, polygon, solana, solanaDevnet,solanaTestnet],
+  networks: [bsc, bscTestnet, polygon, polygonAmoy, solana, solanaDevnet,solanaTestnet],
   metadata: metadata,
   projectId,
   featuredWalletIds:[

@@ -28,6 +28,6 @@ export default function PrimaryButton({variant = "contained", fullWidth = false,
     ${fullWidth && "w-full"}
     ${loading && "pointer-events-none"}      
   `}>
-    {!loading ? children : <Preloader type="linear" color={variant === "contained" ? "white" : "green"} />}
+    {!loading ? children : <Preloader type="linear" color={variant === "contained" ? "white" : "red"} />}
   </button>
 }
