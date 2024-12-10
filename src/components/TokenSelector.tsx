@@ -4,12 +4,10 @@ import Svg from "@/components/atoms/Svg";
 import { useAccount, useBalance, useBlockNumber } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
 import { NumericFormat } from "react-number-format";
-import { isNativeToken } from "@/other/isNativeToken";
+// import { isNativeToken } from "@/other/isNativeToken";
 import { useEffect, useMemo } from "react";
-import useUSDPrices from "@/hooks/useUSDPrices";
 import clsx from "clsx";
 import { formatFloat } from "@/other/formatFloat";
-import {useTranslations} from "use-intl";
 
 function PercentageButtons({ value, balance, setAmount, decimals, isNativeToken = false }: {
   value: string,
@@ -26,12 +24,7 @@ function PercentageButtons({ value, balance, setAmount, decimals, isNativeToken 
   return <div className="flex gap-2">
     {[25, 50, 75, 100].map((part) => {
       let valueToSet = balance * BigInt(part) / BigInt(100);
-      if (isNativeToken) {
-        valueToSet = valueToSet - parseUnits("1", decimals);
-        if (valueToSet < BigInt(0)) {
-          valueToSet = BigInt(0);
-        }
-      }
+   
       const formattedValueToSet = formatUnits(valueToSet, decimals);
 
       return <SmallOutlineTabButton key={part} isActive={value === formattedValueToSet}
@@ -49,7 +42,6 @@ function InputWithTokenPick({ token, onPick, value, setAmount, pair, readonly = 
   readonly?: boolean,
   readonlyToken?: boolean
 }) {
-  const t = useTranslations("PickTokenDialog");
 
   return <div className="relative w-full">
     <NumericFormat
@@ -110,7 +102,7 @@ function InputWithTokenPick({ token, onPick, value, setAmount, pair, readonly = 
             <span className="w-6 h-6 mr-1">
               <Svg iconName="currency"/>
             </span>
-              <span>{t("select_token")}</span>
+              <span>Select token</span>
               {!readonly && !readonlyToken && <span className="w-6 h-6 text-primary-text">
             <Svg iconName="arrow-bottom"/>
           </span>}
@@ -151,9 +143,7 @@ export default function TokenSelector({
   const { data, refetch } = useBalance({
     address: token ? address : undefined,
     token: token
-      ? isNativeToken(token?.address)
-        ? undefined
-        : token.address as `0x${string}`
+      ? token.address as `0x${string}`
       : undefined,
   });
 
@@ -177,13 +167,12 @@ export default function TokenSelector({
     return BigInt(0);
   }, [balance, data, isConnected])
 
-  const usdPrices = useUSDPrices();
 
   return <div className="p-4 xl:p-5 bg-secondary-bg rounded-2">
     <div className="flex justify-between items-center mb-2.5 h-6">
       <h3 className="text-14 font-bold">{label}</h3>
       {!readonly &&
-        <PercentageButtons isNativeToken={isNativeToken(token?.address || "")} value={amount} balance={_balance}
+        <PercentageButtons value={amount} balance={_balance}
                            setAmount={setAmount} decimals={token?.decimals}/>}
     </div>
     <InputWithTokenPick readonly={readonly} readonlyToken={readonlyToken} token={token} onPick={onPick} value={amount}
@@ -191,7 +180,7 @@ export default function TokenSelector({
     <div className="flex justify-between items-center mt-2 text-secondary-text text-12 min-h-[14px]">
       {isConnected && token &&
         <>
-          <span>{amount && usdPrices && token && usdPrices[token.address] ? `~ $${formatFloat(+amount * usdPrices[token.address])}` : ""}</span>
+          {/* <span>{amount && usdPrices && token && usdPrices[token.address] ? `~ $${formatFloat(+amount * usdPrices[token.address])}` : ""}</span> */}
           <span>Balance: {formatFloat(formatUnits(_balance, token.decimals))}</span>
         </>
       }

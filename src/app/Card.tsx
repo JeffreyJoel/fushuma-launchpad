@@ -50,7 +50,7 @@ function Card({ children, onClick, cardState, cardIndex }: Props) {
 
   const getExplorerTokenLink = () => {
     switch (chainInfo.chainId) {
-      case 199:
+      case 56:
         return "https://bttcscan.com/token/";
       case 820:
         return "https://explorer.callisto.network/tokens/";

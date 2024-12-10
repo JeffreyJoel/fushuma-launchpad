@@ -6,7 +6,7 @@ import {
   useWriteContract
 } from "wagmi";
 import { ERC20_ABI } from "@/config/abis/erc20";
-import { isNativeToken } from "@/other/isNativeToken";
+// import { isNativeToken } from "@/other/isNativeToken";
 import { Abi, Address, formatUnits } from "viem";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import addToast from "@/other/toast";
@@ -38,7 +38,7 @@ export default function useAllowance({ token, contractAddress, amountToCheck}: {
     ],
     query: {
       //make sure hook don't run when there is no addresses
-      enabled: Boolean(token?.address) && !isNativeToken(token?.address || "") && Boolean(address) && Boolean(contractAddress)
+      enabled: Boolean(token?.address) && Boolean(address) && Boolean(contractAddress)
     }
     // cacheTime: 0,
     // watch: true,
@@ -55,10 +55,6 @@ export default function useAllowance({ token, contractAddress, amountToCheck}: {
   const isAllowed = useMemo(() => {
     if (!token) {
       return false;
-    }
-
-    if (isNativeToken(token.address)) {
-      return true;
     }
 
     if (currentAllowance?.data && amountToCheck) {
@@ -90,7 +86,7 @@ export default function useAllowance({ token, contractAddress, amountToCheck}: {
   const [isApproving, setIsApproving] = useState(false);
 
   const writeTokenApprove = useCallback(async () => {
-    if(!amountToCheck || !contractAddress || !token || !walletClient || !address || !chainId) {
+    if(!amountToCheck || !contractAddress || !token || !walletClient || !address || !chainId || !publicClient) {
       return;
     }
 

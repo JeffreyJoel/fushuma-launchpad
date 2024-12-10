@@ -10,7 +10,8 @@ export default function PrimaryButton({variant = "contained", fullWidth = false,
   return <button {...props} className={`
     h-10
     rounded-25
-    px-6
+    px-3
+    md:px-6
     font-medium
     border
     border-red
@@ -22,6 +23,8 @@ export default function PrimaryButton({variant = "contained", fullWidth = false,
     disabled:bg-transparent
     disabled:text-grey-light
     disabled:border-grey-light
+    text-14
+    md:text-16
     ${variant === "contained" 
       ? "text-white bg-red hover:bg-red-light hover:border-bg-red-light" 
       : "text-primary-text bg-transparent hover:bg-green/20"}

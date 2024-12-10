@@ -57,6 +57,10 @@ export function useRecentTransactionTracking() {
 
 
   const waitForTransaction = useCallback(async (hash: `0x${string}`, account: string, title: string) => {
+    
+    if(!publicClient) {
+      return;
+    }
     const transaction = await publicClient.waitForTransactionReceipt(
       { hash }
     );

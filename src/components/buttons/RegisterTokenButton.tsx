@@ -7,7 +7,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement>{
 
 export default function RegisterTokenButton({ token, ...props }: Props) {
   const handleRegister = async (token: TokenInfo) => {
-    const tokenAdded = await window.ethereum.request({
+    const tokenAdded = await (window as any)?.ethereum?.request({
       method: 'wallet_watchAsset',
       params: {
         type: 'ERC20',

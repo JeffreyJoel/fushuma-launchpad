@@ -1,36 +1,28 @@
 "use client";
 
-// import { config } from "@/config/wagmi/config";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type State, WagmiProvider } from "wagmi";
 import { ReactNode } from "react";
 import ToastProvider from "@/providers/ToastProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
-import { AbstractIntlMessages, NextIntlClientProvider } from "next-intl";
-import { Locale } from "@/navigation";
 import { modal, wagmiAdapter, config } from '@/connection'
 
 type Props = {
   children: ReactNode,
   initialState?: State | undefined,
-  messages: AbstractIntlMessages | undefined,
-  locale: Locale
 }
 
 const queryClient = new QueryClient()
-const timeZone = 'Europe/Vienna';
 
-export function Providers({ children,  messages, locale }: Props) {
+export function Providers({ children }: Props) {
   return (
     <WagmiProvider config={config} >
       <QueryClientProvider client={queryClient}>
-        <NextIntlClientProvider locale={locale} timeZone={timeZone} messages={messages}>
           <ThemeProvider attribute="class">
             <ToastProvider>
               {children}
             </ToastProvider>
           </ThemeProvider>
-        </NextIntlClientProvider>
       </QueryClientProvider>
     </WagmiProvider>
   )

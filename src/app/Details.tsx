@@ -6,7 +6,6 @@ import { nativeTokens } from "@/config/token-lists/nativeTokens";
 import { formatFloat } from "@/other/formatFloat";
 import PrimaryButton from "@/components/buttons/PrimaryButton";
 import Svg from "@/components/atoms/Svg";
-import { useConnectWalletDialogStateStore } from "@/components/dialogs/stores/useConnectWalletStore";
 import nameSVG from "@/../public/images/launchpad-details/Name.svg";
 import symbolSVG from "@/../public/images/launchpad-details/Symbol.svg";
 import totalSupplySVG from "@/../public/images/launchpad-details/Total-Supply.svg";
@@ -30,7 +29,7 @@ import {
 import { useRecentTransactionsStore } from "@/stores/useRecentTransactions";
 import { useAwaitingDialogStore } from "@/stores/useAwaitingDialogStore";
 import { Address, formatUnits, Abi, parseUnits } from "viem";
-import { isNativeToken } from "@/other/isNativeToken";
+// import { isNativeToken } from "@/other/isNativeToken";
 import { ICOcontract_ABI } from "@/config/abis/IcoContract";
 import addToast from "@/other/toast";
 import { vestingContractABI } from "@/config/abis/vestingContract";
@@ -117,7 +116,6 @@ function Details({ children, onClick }: Props) {
   const { setOpened, setClose, setSubmitted } = useAwaitingDialogStore();
   const publicClient = usePublicClient();
   const { address, isConnected, chainId } = useAccount();
-  const { setIsOpened } = useConnectWalletDialogStateStore();
   const { switchChainAsync } = useSwitchChain();
   const { data: walletClient } = useWalletClient();
 
@@ -214,10 +212,7 @@ function Details({ children, onClick }: Props) {
 
   const { data: balanceValue, refetch } = useBalance({
     address: currentCurrency ? address : undefined,
-    token: currentCurrency
-      ? isNativeToken(currentCurrency.address)
-        ? undefined
-        : (currentCurrency.address as `0x${string}`)
+    token: currentCurrency ?(currentCurrency.address as `0x${string}`)
       : undefined,
     chainId,
   });
@@ -636,12 +631,7 @@ function Details({ children, onClick }: Props) {
         }
         if (value == "100" && currentCurrency) {
           let amountToBeDeducted = 0;
-          if (
-            isNativeToken(currentCurrency.address) &&
-            Number(formatedBigInt) > 0
-          ) {
-            amountToBeDeducted = Number(formatedBigInt) * 0.0005; // deduct 0.05% from the balance
-          }
+        
           if (
             Number(formatedBigInt) * Number(price) <
             formatedtokensForSale - formatedCurrentSupply
@@ -692,10 +682,6 @@ function Details({ children, onClick }: Props) {
     }
   };
 
-  // The click event of "Connect Wallet" btn
-  const connectWallet = () => {
-    setIsOpened(true);
-  };
 
   // The click event of "Buy" btn (place the integration here)
   const buyTokens = useCallback(async () => {
@@ -796,7 +782,7 @@ function Details({ children, onClick }: Props) {
         await switchNetwork(currentChainID);
       }
     } else {
-      connectWallet();
+      // connectWallet();
     }
   };
 
@@ -840,7 +826,7 @@ function Details({ children, onClick }: Props) {
 
   // The function that adds token to metamask
   const handleRegister = async () => {
-    const tokenAdded = await window.ethereum.request({
+    const tokenAdded = await (window.ethereum as any)?.request({
       method: "wallet_watchAsset",
       params: {
         type: "ERC20",

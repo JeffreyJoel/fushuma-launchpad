@@ -6,10 +6,6 @@ import { Launchpad } from "@/config/types/launchpadTypes";
 import Image from "next/image";
 import addToast from "@/other/toast";
 import { useAwaitingDialogStore } from "@/stores/useAwaitingDialogStore";
-import {
-  useConnectWalletDialogStateStore,
-  useConnectWalletStore,
-} from "@/components/dialogs/stores/useConnectWalletStore";
 
 interface Props {
   supportedChains: { [key: string]: WrappedToken };
@@ -25,15 +21,15 @@ type chainsInOrderData = {
   launchpads: number;
 };
 
-type chainID = 820 | 61 | 199;
+type chainID = 56 | 137 | 199;
 
 function SelectChain({ supportedChains, setChain }: Props) {
   const { switchChainAsync } = useSwitchChain();
   const { isConnected, chainId } = useAccount();
-  const { setIsOpened: setConnectOpened } = useConnectWalletDialogStateStore();
+  // const { setIsOpened: setConnectOpened } = useConnectWalletDialogStateStore();
   const { setOpened: setSwitchOpened, setClose: setSwitchClose } =
     useAwaitingDialogStore();
-  const { setChainToConnect } = useConnectWalletStore();
+  // const { setChainToConnect } = useConnectWalletStore();
   const [chainsList, setChainsList] = useState<chainsInOrderData[]>([]);
   const [opacityState, setOpacityState] = useState("0");
   const [chainsAnimations, setChainsAnimations] = useState({});
@@ -80,30 +76,30 @@ function SelectChain({ supportedChains, setChain }: Props) {
     }
   }, [supportedChains, chainCounter]);
 
-  const clickHandler = async (chainID: chainID) => {
-    if (isConnected) {
-      if (chainId !== chainID) {
-        try {
-          setSwitchOpened("Change network");
-          const connected = await switchChainAsync({ chainId: chainID });
-          if (connected) {
-            setChain(chainID);
-            setSwitchClose();
-            addToast("Success!", "success");
-          }
-        } catch (err: any) {
-          setSwitchClose();
-          addToast("Something went wrong, please try again later.", "error");
-        }
-      } else {
-        setChain(chainID);
-      }
-    } else {
-      addToast("Please connect your wallet.", "error");
-      setChainToConnect(chainID);
-      setConnectOpened(true);
-    }
-  };
+  // const clickHandler = async (chainID: chainID) => {
+  //   if (isConnected) {
+  //     if (chainId !== chainID) {
+  //       try {
+  //         setSwitchOpened("Change network");
+  //         const connected = await switchChainAsync({ chainId: chainID });
+  //         if (connected) {
+  //           setChain(chainID);
+  //           setSwitchClose();
+  //           addToast("Success!", "success");
+  //         }
+  //       } catch (err: any) {
+  //         setSwitchClose();
+  //         addToast("Something went wrong, please try again later.", "error");
+  //       }
+  //     } else {
+  //       setChain(chainID);
+  //     }
+  //   } else {
+  //     addToast("Please connect your wallet.", "error");
+  //     setChainToConnect(chainID);
+  //     setConnectOpened(true);
+  //   }
+  // };
 
   const convertDateTimeStringToMilliseconds = (dateTimeString: string) => {
     if (dateTimeString) {
@@ -150,9 +146,9 @@ function SelectChain({ supportedChains, setChain }: Props) {
                 {chainCounter(data.chainData.chainId) > 0 ? (
                   <li
                     className="flex items-center relative"
-                    onClick={() =>
-                      clickHandler(data.chainData.chainId as chainID)
-                    }
+                    // onClick={() =>
+                    //   clickHandler(data.chainData.chainId as chainID)
+                    // }
                   >
                     <div className="relative w-full">
                       <button className="w-full h-[60px] group flex items-center justify-between pr-2.5 pl-2.5 rounded-2.5 hover:bg-secondary-bg">

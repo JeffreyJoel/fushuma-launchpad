@@ -4,38 +4,18 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { PropsWithChildren } from "react";
-import { notFound } from "next/navigation";
 import clsx from "clsx";
-import { headers } from "next/headers";
-import { cookieToInitialState } from "wagmi";
-import { Providers } from "@/app/[locale]/providers";
+import { Providers } from "./providers";
 import AwaitingDialog from "@/components/AwaitingDialog";
-import ConnectWalletDialog from "@/components/dialogs/ConnectWalletDialog";
 
 const montserrat = Montserrat({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Fushuma Lauchpads",
 };
 
-interface Props {
-  params: {
-    locale: "fr" | "en" | "uk";
-  };
-}
+interface RootLayoutProps extends PropsWithChildren {}
 
-export default async function RootLayout({
-  children,
-  params: { locale },
-}: PropsWithChildren<Props>) {
-  let messages;
-
-
-  try {
-    messages = (await import(`../../../messages/${locale}.json`)).default;
-  } catch (error) {
-    notFound();
-  }
-
+export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html className="min-h-[100%]" lang="en" suppressHydrationWarning>
       <head>
@@ -47,17 +27,13 @@ export default async function RootLayout({
           "bg-global dark:bg-global-dark duration-200 font-medium h-full"
         )}
       >
-        <Providers
-          messages={messages}
-          locale={locale}
-        >
+        <Providers>
           <div className="grid min-h-[100vh] grid-rows-layout">
             <Header />
             <div>{children}</div>
             <Footer />
           </div>
           <AwaitingDialog />
-          <ConnectWalletDialog />
         </Providers>
       </body>
     </html>

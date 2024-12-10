@@ -12,8 +12,8 @@ export default function ActionIconButton({icon, svgClassname = "", ...props}: Pr
     h-10
     rounded-full
     bg-transparent
-    text-green
-    hover:bg-green/20
+    text-red
+    hover:bg-red/20
     flex
     items-center
     justify-center

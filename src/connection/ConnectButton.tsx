@@ -3,12 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { modal } from "@/connection";
 import PrimaryButton from "@/components/buttons/PrimaryButton";
-import { useTranslations } from "use-intl";
 import { useAppKitAccount } from "@reown/appkit/react";
 export function ConnectButton() {
   const [isClient, setIsClient] = useState(false);
   const { address, caipAddress, isConnected } = useAppKitAccount();
-  const navT = useTranslations("Navigation");
+
   const handleConnect = useCallback(() => {
     modal.open();
   }, []);
@@ -21,7 +20,7 @@ export function ConnectButton() {
     <appkit-button />
   ) : (
     <PrimaryButton onClick={() => handleConnect()}>
-      {navT("connect_wallet")}
+      Connect Wallet
     </PrimaryButton>
   );
 }
