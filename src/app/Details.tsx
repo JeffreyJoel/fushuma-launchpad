@@ -1,7 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useReadContract, useWriteContract, useWatchContractEvent } from 'wagmi';
+
 import PageCard from "@/components/PageCard";
 import Image from "next/image";
-import { Launchpad, ChainDetails } from "@/config/types/launchpadTypes";
+import { Launchpad, ChainDetails, ICODetails } from "@/config/types/launchpadTypes";
 import { nativeTokens } from "@/config/token-lists/nativeTokens";
 import { formatFloat } from "@/other/formatFloat";
 import PrimaryButton from "@/components/buttons/PrimaryButton";
@@ -22,26 +24,26 @@ import {
   useAccount,
   useBalance,
   useSwitchChain,
-  useReadContract,
   usePublicClient,
   useWalletClient,
 } from "wagmi";
 import { useRecentTransactionsStore } from "@/stores/useRecentTransactions";
 import { useAwaitingDialogStore } from "@/stores/useAwaitingDialogStore";
-import { Address, formatUnits, Abi, parseUnits } from "viem";
-// import { isNativeToken } from "@/other/isNativeToken";
+import { Address, formatUnits, parseUnits } from "viem";
 import { ICOcontract_ABI } from "@/config/abis/IcoContract";
 import addToast from "@/other/toast";
 import { vestingContractABI } from "@/config/abis/vestingContract";
-import { SLOTH_VESTING_ABI } from "@/config/abis/slothVesting";
 import useAllowance from "@/hooks/useAllowance";
 import { WrappedToken } from "@/config/types/WrappedToken";
+import { useLaunchpadContract } from "@/helpers/launchpadFunctions";
 
 type LaunchpadData = {
   launchpad: Launchpad;
   name: string;
   symbol: string;
   decimals: number;
+  ico?: ICODetails;
+  tokenAddress?: Address;
 };
 
 type currentCurrencyData = {
@@ -62,21 +64,24 @@ interface Props {
 
 function Details({ children, onClick }: Props) {
   // launchpad main vars
-  const [launchpad, setLaunchpad] = useState<Launchpad>(children.launchpad);
+  const [launchpad, setLaunchpad] = useState<Launchpad | undefined>(children.launchpad);
   const [timer, setTimer] = useState("Loading...");
   const [dialogue, setDialogue] = useState("Starts in");
   const [inputValue, setInputValue] = useState("");
   const [calculatedValue, setCalculatedValue] = useState("1");
   const [getlabelState, setLabelState] = useState("Loading");
   const [dialogOpened, setDialogOpened] = useState(false);
+  
+  // ICO data from parent component
+  const [icoData, setIcoData] = useState(children.ico);
   // Vars that scales if the user changed his chain
   const [currentCurrency, setCurrentCurrency] = useState<WrappedToken>();
   const [price, setPrice] = useState(0);
   const [currentChainID, setCurrentChainID] = useState(0);
   const [tokenValues, setTokenValues] = useState<currentCurrencyData[]>([]);
   const [currentChain, setCurrentChain] = useState<ChainDetails>({
-    tokenAddress: `0x${""}`,
-    icoContract: `0x${""}`,
+    tokenAddress: children.tokenAddress || `0x${""}`,
+    icoContract: children.ico?.state.ICOOwner || `0x${""}`,
     vestingContract: `0x${""}`,
     currencies: { nativePrice: 0, useNativeAsPayment: true, tokens: [{}] },
   });
@@ -97,18 +102,9 @@ function Details({ children, onClick }: Props) {
   // if the launchpads list are not loaded
 
   // Gets the infos on the current chain from nativeTokens obj (symbol, chainID, decimals...)
-  let firstSupportedChainIndex = launchpad
-    ? Object.keys(launchpad.chains).length - 1
-    : 0;
-  let firstSupportedChainID = launchpad
-    ? Object.keys(launchpad.chains)[firstSupportedChainIndex]
-    : 0;
-  let firstSupportedChain = launchpad
-    ? launchpad.chains[firstSupportedChainID]
-    : null;
-  let [chainInfo, setChainInfo] = useState(
-    nativeTokens[Number(firstSupportedChainID)]
-  );
+  let chainKey = launchpad && launchpad.chains ? Object.keys(launchpad.chains)[0] : 0;
+  let firstSupportedChain = launchpad && launchpad.chains ? launchpad.chains[chainKey] : null;
+  let [chainInfo, setChainInfo] = useState(nativeTokens[Number(chainKey)]);
   // funcs
   const { addTransaction } = useRecentTransactionsStore();
   const { setOpened: setSwitchOpened, setClose: setSwitchClose } =
@@ -119,21 +115,34 @@ function Details({ children, onClick }: Props) {
   const { switchChainAsync } = useSwitchChain();
   const { data: walletClient } = useWalletClient();
 
+  // Initialize the launchpad contract hooks
+  const launchpadContract = useLaunchpadContract();
+
+  // Use the ICO details hook if we have an ICO ID
+  const icoId = icoData?.id;
+  const { data: icoDetailsData, isLoading: icoDetailsLoading } = 
+    icoId ? launchpadContract.useICODetails(icoId) : { data: undefined, isLoading: false };
+
+  // Use contract data if available, otherwise use the data passed from parent
   const { data: ICOinfoData } = useReadContract({
     abi: ICOcontract_ABI,
     address: currentChain.icoContract,
     functionName: "getCurrentRound",
   });
 
-  const { data: VestingData } = useReadContract({
-    abi: vestingContractABI,
-    functionName: "getUnlockedAmount",
-    address: currentChain.vestingContract,
-    args: [address!],
-    query: {
-      enabled: Boolean(address),
-    },
-  });
+  // Get vesting data if available
+  // const { data: vestingContractAddress } = 
+  //   launchpadContract.getVestingContract(currentChain.tokenAddress as Address);
+    
+  // const { data: VestingData } = useReadContract({
+  //   abi: vestingContractABI,
+  //   functionName: "getUnlockedAmount",
+  //   address: vestingContractAddress,
+  //   args: [address!],
+  //   query: {
+  //     enabled: Boolean(address),
+  //   },
+  // });
 
   const getExplorerTokenLink = () => {
     switch (currentChainID) {
@@ -143,6 +152,9 @@ function Details({ children, onClick }: Props) {
         return "https://explorer.callisto.network/tokens/";
       case 61:
         return "https://etc.blockscout.com/token/";
+
+      default:
+        return "";
     }
   };
 
@@ -154,6 +166,9 @@ function Details({ children, onClick }: Props) {
         return "https://explorer.callisto.network/address/";
       case 61:
         return "https://etc.blockscout.com/address/";
+
+      default:
+        return "";
     }
   };
 
@@ -161,20 +176,20 @@ function Details({ children, onClick }: Props) {
   const explorerContract = getExplorerContractLink();
   const explorerToken = getExplorerTokenLink();
 
-  // Define all the infos
+  // Define all the infos with safe defaults
   const {
-    chains,
-    logo,
-    description,
-    supply,
-    softCap,
-    hardCap,
-    endDate,
-    website,
-    twitter,
-    telegram,
-    saleType,
-  } = launchpad;
+    chains = {},
+    logo = '',
+    description = '',
+    supply = '',
+    softCap = '',
+    hardCap = '',
+    endDate = '',
+    website = '',
+    twitter = '',
+    telegram = '',
+    saleType = '',
+  } = launchpad || {};
 
   const { name, symbol, decimals } = tokenInfo;
 
@@ -184,12 +199,14 @@ function Details({ children, onClick }: Props) {
     totalSold: currentSupply,
   } = ICOInfo;
 
-  const formatedtokensForSale = Number(
-    formatFloat(formatUnits(tokensForSale, decimals)) || 0
-  );
-  const formatedCurrentSupply = Number(
-    formatFloat(formatUnits(currentSupply, decimals)) || 0
-  );
+  // Format token values with useMemo to avoid recalculations during render
+  const formatedtokensForSale = useMemo(() => {
+    return Number(formatFloat(formatUnits(tokensForSale, decimals)) || 0);
+  }, [tokensForSale, decimals]);
+  
+  const formatedCurrentSupply = useMemo(() => {
+    return Number(formatFloat(formatUnits(currentSupply, decimals)) || 0);
+  }, [currentSupply, decimals]);
 
   const [unlockedAmount, setUnlockedAmount] = useState(BigInt(0));
   const [lockedAmount, setLockedAmount] = useState(BigInt(0));
@@ -204,11 +221,15 @@ function Details({ children, onClick }: Props) {
     return date;
   };
 
-  // Convert time to readable format
-  const startDateFormat = new Date(Number(startDate) * 1000);
-  const endDateFormat = new Date(
-    Number(convertDateTimeStringToMilliseconds(endDate))
-  );
+  // Convert time to readable format - wrapped in useMemo to avoid recalculation during render
+  const startDateFormat = useMemo(() => {
+    return new Date(Number(startDate) * 1000);
+  }, [startDate]);
+  
+  const endDateFormat = useMemo(() => {
+    if (!endDate) return new Date();
+    return new Date(Number(convertDateTimeStringToMilliseconds(endDate)));
+  }, [endDate]);
 
   const { data: balanceValue, refetch } = useBalance({
     address: currentCurrency ? address : undefined,
@@ -228,6 +249,16 @@ function Details({ children, onClick }: Props) {
   });
 
   useEffect(() => {
+    // Initialize ICO info with data from the parent component if available
+    if (children.ico && !ICOInfo.amount) {
+      setICOInfo({
+        amount: children.ico.params.amount || BigInt(0),
+        roundStarts: children.ico.params.startDate || BigInt(0),
+        totalSold: children.ico.state.totalSold || BigInt(0)
+      });
+    }
+    
+    // Update with live data from contract if available
     if (ICOinfoData) {
       let info = ICOinfoData as {
         roundStarts: bigint;
@@ -236,13 +267,14 @@ function Details({ children, onClick }: Props) {
       };
       setICOInfo(info);
     }
-    if (VestingData) {
-      const vesting = VestingData as bigint[];
-      setUnlockedAmount(vesting[0]);
-      setLockedAmount(vesting[1]);
-      setNextUnlock(vesting[2]);
-    }
-  }, [ICOinfoData, VestingData]);
+    
+    // if (VestingData) {
+    //   const vesting = VestingData as bigint[];
+    //   setUnlockedAmount(vesting[0]);
+    //   setLockedAmount(vesting[1]);
+    //   setNextUnlock(vesting[2]);
+    // }
+  }, [ICOinfoData, children.ico]);
 
   // used to locate the launchpad in the list of launchpads
   useEffect(() => {
@@ -331,164 +363,79 @@ function Details({ children, onClick }: Props) {
     formatedtokensForSale,
   ]);
 
-  // if the chainId has been changed and its not the required one then set the inputs to 0
+  // Handle chain and currency setup
   useEffect(() => {
     if (launchpad && chains && chainId) {
+      // We're now working with just one chain
       setCurrentChainID(Number(chainId));
-      let currentChainFromList = undefined;
-      Object.keys(chains).forEach((chain) => {
-        if (Number(chain) === chainId) {
-          setCurrentChain(chains[chainId]);
-          setChainInfo(nativeTokens[chainId]);
-          currentChainFromList = chains[chainId];
-        }
-      });
-      if (currentChainFromList) {
-        let chainInfo = nativeTokens[chainId];
-        setCurrentChain(currentChainFromList);
+      const supportedChain = chains[chainKey];
+      
+      if (supportedChain) {
+        // Set up the chain and token information
+        const nativeTokenInfo = nativeTokens[Number(chainKey)];
+        setChainInfo(nativeTokenInfo);
+        setCurrentChain(supportedChain);
         setInputValue("1");
-        const { currencies } = currentChainFromList;
-        const { useNativeAsPayment, tokens, nativePrice } =
-          currencies as currenciesList;
-        if (useNativeAsPayment && chainInfo.symbol) {
+        
+        const { currencies } = supportedChain;
+        const { useNativeAsPayment, tokens, nativePrice } = currencies as currenciesList;
+        
+        if (useNativeAsPayment && nativeTokenInfo.symbol) {
+          // Using native token for payment
           setCurrentCurrency({
-            symbol: chainInfo.symbol,
-            address: chainInfo.address,
-            logoURI: chainInfo.logoURI,
-            chainId: chainInfo.chainId,
-            decimals: chainInfo.decimals,
-            sortsBefore(other) {
-              return false;
-            },
-            equals(other) {
-              return false;
-            },
+            symbol: nativeTokenInfo.symbol,
+            address: nativeTokenInfo.address,
+            logoURI: nativeTokenInfo.logoURI,
+            chainId: nativeTokenInfo.chainId,
+            decimals: nativeTokenInfo.decimals,
+            sortsBefore(other) { return false; },
+            equals(other) { return false; }
           });
           setPrice(nativePrice);
           setCalculatedValue(String(nativePrice));
-        } else {
+        } else if (tokens && tokens.length > 0) {
+          // Using ERC20 token for payment
           setCurrentCurrency({
             symbol: tokens[0].token.symbol,
             address: tokens[0].token.address,
             logoURI: tokens[0].token.logoURI,
-            chainId: chainInfo.chainId,
+            chainId: nativeTokenInfo.chainId,
             decimals: tokens[0].token.decimals,
-            sortsBefore(other) {
-              return false;
-            },
-            equals(other) {
-              return false;
-            },
+            sortsBefore(other) { return false; },
+            equals(other) { return false; }
           });
           setPrice(tokens[0].price);
           setCalculatedValue(String(tokens[0].price));
         }
-        setTokenValues([...tokens]);
-      } else if (firstSupportedChain) {
-        let chainInfo = nativeTokens[firstSupportedChainID];
-        setCurrentChainID(Number(firstSupportedChainID));
-        setCurrentChain(firstSupportedChain);
+        
+        setTokenValues(tokens || []);
+      } else {
+        // Chain not supported, set defaults
+        const nativeTokenInfo = nativeTokens[Number(chainKey)] || {
+          symbol: "ETH",
+          address: "0x0",
+          logoURI: "/default-chain.png",
+          chainId: 1,
+          decimals: 18
+        };
+        
+        setCurrentCurrency({
+          symbol: nativeTokenInfo.symbol,
+          address: nativeTokenInfo.address,
+          logoURI: nativeTokenInfo.logoURI,
+          chainId: nativeTokenInfo.chainId,
+          decimals: nativeTokenInfo.decimals,
+          sortsBefore(other) { return false; },
+          equals(other) { return false; }
+        });
+        
         setInputValue("0");
         setCalculatedValue("0");
-        setTokenValues([]);
-        if (
-          firstSupportedChain.currencies.useNativeAsPayment &&
-          chainInfo.symbol
-        ) {
-          const { tokens } = firstSupportedChain.currencies as currenciesList;
-          setCurrentCurrency({
-            symbol: chainInfo.symbol,
-            address: chainInfo.address,
-            logoURI: chainInfo.logoURI,
-            chainId: chainInfo.chainId,
-            decimals: chainInfo.decimals,
-            sortsBefore(other) {
-              return false;
-            },
-            equals(other) {
-              return false;
-            },
-          });
-          setPrice(tokens[0].price);
-        } else if (!firstSupportedChain.currencies.useNativeAsPayment) {
-          const { tokens } = firstSupportedChain.currencies as currenciesList;
-          setCurrentCurrency({
-            symbol: tokens[0].token.symbol,
-            address: tokens[0].token.address,
-            logoURI: tokens[0].token.logoURI,
-            chainId: chainInfo.chainId,
-            decimals: tokens[0].token.decimals,
-            sortsBefore(other) {
-              return false;
-            },
-            equals(other) {
-              return false;
-            },
-          });
-          setPrice(tokens[0].price);
-        } else {
-          setCurrentCurrency({
-            symbol: "undef",
-            address: "0xundef",
-            logoURI: "undef",
-            chainId: chainInfo.chainId | 0,
-            decimals: 0,
-            sortsBefore(other) {
-              return false;
-            },
-            equals(other) {
-              return false;
-            },
-          });
-          setPrice(0);
-        }
-      }
-    } else if (chainId === undefined && launchpad && firstSupportedChain) {
-      setCurrentChainID(Number(firstSupportedChainID));
-      setCurrentChain(firstSupportedChain);
-      setInputValue("0");
-      setCalculatedValue("0");
-      setTokenValues([]);
-      if (chainInfo.symbol) {
-        setCurrentCurrency({
-          symbol: chainInfo.symbol,
-          address: chainInfo.address,
-          logoURI: chainInfo.logoURI,
-          chainId: chainInfo.chainId,
-          decimals: chainInfo.decimals,
-          sortsBefore(other) {
-            return false;
-          },
-          equals(other) {
-            return false;
-          },
-        });
         refetch();
-      } else {
-        setCurrentCurrency({
-          symbol: "undef",
-          address: "0xundef",
-          logoURI: "undef",
-          chainId: chainInfo.chainId | 0,
-          decimals: 0,
-          sortsBefore(other) {
-            return false;
-          },
-          equals(other) {
-            return false;
-          },
-        });
       }
     }
-  }, [
-    launchpad,
-    chainId,
-    chainInfo,
-    chains,
-    firstSupportedChain,
-    firstSupportedChainID,
-    refetch,
-  ]);
+  }, [launchpad, chainId, chainKey, chains, refetch]);
+
 
   // Close the dialog when the chain is changed
   useEffect(() => {
@@ -675,7 +622,7 @@ function Details({ children, onClick }: Props) {
       if (currentChainID === chainId) {
         return "Buy";
       } else {
-        return `Switch to ${chainInfo.name}`;
+        return `Switch to ${chainInfo?.name}`;
       }
     } else {
       return "Connect your wallet";
@@ -684,6 +631,13 @@ function Details({ children, onClick }: Props) {
 
 
   // The click event of "Buy" btn (place the integration here)
+  const { write: executeBuyToken, isPending: isBuyPending } = 
+    launchpadContract.useBuyToken(
+      icoId || BigInt(0), 
+      parseUnits(calculatedValue || "0", currentCurrency?.decimals || 18), 
+      address || "0x0"
+    );
+
   const buyTokens = useCallback(async () => {
     if (!walletClient || !address || !chainId || !balanceValue?.value || !publicClient) {
       return;
@@ -709,32 +663,10 @@ function Details({ children, onClick }: Props) {
 
     setOpened(`Buy ${calculatedValue} ${symbol}`);
 
-    const params: {
-      account: Address;
-      address: Address;
-      abi: readonly unknown[];
-      functionName: "buyToken";
-      args: [string, `0x${string}`];
-    } = {
-      address: currentChain.icoContract, // here address
-      account: address,
-      abi: ICOcontract_ABI,
-      functionName: "buyToken",
-      args: [
-        parseUnits(
-          calculatedValue,
-          currentCurrency?.decimals ? currentCurrency?.decimals : 18
-        ).toString(),
-        address,
-      ],
-    };
     try {
-      const estimatedGas = await publicClient.estimateContractGas(params);
-      const { request } = await publicClient.simulateContract({
-        ...params,
-        gas: estimatedGas + BigInt(30000),
-      });
-      const hash = await walletClient.writeContract(request);
+      // Use the launchpad contract hook to buy tokens
+      const hash = await executeBuyToken();
+      
       if (hash) {
         addTransaction(
           {
@@ -749,7 +681,7 @@ function Details({ children, onClick }: Props) {
         await publicClient.waitForTransactionReceipt({ hash });
       }
     } catch (e) {
-      console.log(e);
+      console.error("Error buying tokens:", e);
       setClose();
       addToast("Unexpected error, please contact support", "error");
     }
@@ -768,27 +700,33 @@ function Details({ children, onClick }: Props) {
     inputValue,
     isAllowed,
     writeTokenApprove,
-    currentChain,
+    launchpadContract,
     symbol,
     calculatedValue,
   ]);
 
-  // The function that defines the function of the buy / connect wallet / switch network  button
+  // The function that defines the function of the buy / connect wallet / switch network button
   const buyBtnFunctionHandler = async () => {
     if (isConnected) {
       if (currentChainID === chainId) {
         buyTokens();
       } else {
-        await switchNetwork(currentChainID);
+        try {
+          await switchNetwork?.(currentChainID);
+        } catch (error) {
+          console.error("Failed to switch network:", error);
+          addToast("Failed to switch network. Please try again.", "error");
+        }
       }
     } else {
-      // connectWallet();
+      // Show connect wallet dialog via the Connect button in the UI
+      addToast("Please connect your wallet first", "info");
     }
   };
 
   // Returns the buy button element depending on the current state of the user's wallet and input value
   const isbuttonDisabled = () => {
-    if (Number(inputValue) > 0 || chainId !== currentChainID) {
+    if ((Number(inputValue) > 0 && Number(inputValue) >= 0.001) || chainId !== currentChainID) {
       return (
         <button className="buy-btn" onClick={() => buyBtnFunctionHandler()}>
           {buyBtnTextHandler()}
@@ -840,70 +778,6 @@ function Details({ children, onClick }: Props) {
     });
   };
 
-  const claimVesting = useCallback(async () => {
-    if (!walletClient || !address || !chainId || !publicClient) {
-      return;
-    }
-
-    setOpened(
-      `Claim ${formatFloat(formatUnits(unlockedAmount, decimals))} ${symbol}`
-    );
-
-    const params: {
-      address: Address;
-      account: Address;
-      abi: Abi;
-      functionName: "claim";
-    } = {
-      address: currentChain.vestingContract,
-      account: address,
-      abi: SLOTH_VESTING_ABI,
-      functionName: "claim",
-    };
-
-    try {
-      const estimatedGas = await publicClient.estimateContractGas(params);
-
-      const { request } = await publicClient.simulateContract({
-        ...params,
-        gas: estimatedGas + BigInt(30000),
-      });
-      const hash = await walletClient.writeContract(request);
-      if (hash) {
-        addTransaction(
-          {
-            account: address,
-            hash,
-            chainId,
-            title: `Claimed ${formatFloat(
-              formatUnits(unlockedAmount, decimals)
-            )} ${symbol}`,
-          },
-          address
-        );
-        setSubmitted(hash, chainId as any);
-
-        await publicClient.waitForTransactionReceipt({ hash });
-      }
-    } catch (e) {
-      console.log(e);
-      setClose();
-      addToast("Unexpected error, please contact support", "error");
-    }
-  }, [
-    addTransaction,
-    address,
-    chainId,
-    publicClient,
-    setClose,
-    setOpened,
-    setSubmitted,
-    unlockedAmount,
-    walletClient,
-    currentChain,
-    decimals,
-    symbol,
-  ]);
 
   const handleSwitchTokens = (token: currentCurrencyData) => {
     setCurrentCurrency({
@@ -1009,7 +883,7 @@ function Details({ children, onClick }: Props) {
         <div className="w-full sm:w-auto claim-btn">
           <PrimaryButton
             fullWidth
-            onClick={() => claimVesting()}
+            // onClick={() => claimVesting()}
             disabled={unlockedAmount === BigInt(0)}
             variant="outlined"
           >
@@ -1186,7 +1060,7 @@ function Details({ children, onClick }: Props) {
             <p style={{ margin: "8px 0px 22px" }}>
               <b>Available on:</b>
             </p>
-            {Object.keys(launchpad.chains).map((chain) => (
+            {launchpad && launchpad.chains ? Object.keys(launchpad.chains).map((chain) => (
               <div
                 className="availableChains"
                 key={`AvailableOn${nativeTokens[chain].address}_${nativeTokens[chain].chainId}`}
@@ -1202,7 +1076,7 @@ function Details({ children, onClick }: Props) {
                   </svg>
                 </span>
               </div>
-            ))}
+            )) : <div>No chains available</div>}
           </section>
           <section
             style={{
@@ -1290,19 +1164,22 @@ function Details({ children, onClick }: Props) {
               />
               <span>Start time: </span>
               {String(
-                `${String(startDateFormat.getUTCMonth() + 1).padStart(
-                  2,
-                  "0"
-                )}/${String(startDateFormat.getUTCDate()).padStart(
-                  2,
-                  "0"
-                )}/${String(startDateFormat.getUTCFullYear())} ${String(
-                  startDateFormat.getUTCHours()
-                ).padStart(2, "0")}:${String(
-                  startDateFormat.getUTCMinutes()
-                ).padStart(2, "0")}:${String(
-                  startDateFormat.getUTCSeconds()
-                ).padStart(2, "0")}`
+                (() => {
+                  const date = startDateFormat;
+                  return `${String(date.getUTCMonth() + 1).padStart(
+                    2,
+                    "0"
+                  )}/${String(date.getUTCDate()).padStart(
+                    2,
+                    "0"
+                  )}/${String(date.getUTCFullYear())} ${String(
+                    date.getUTCHours()
+                  ).padStart(2, "0")}:${String(
+                    date.getUTCMinutes()
+                  ).padStart(2, "0")}:${String(
+                    date.getUTCSeconds()
+                  ).padStart(2, "0")}`;
+                })()
               )}{" "}
               (UTC)
             </p>
@@ -1316,19 +1193,22 @@ function Details({ children, onClick }: Props) {
               />
               <span>End time: </span>
               {String(
-                `${String(endDateFormat.getUTCMonth() + 1).padStart(
-                  2,
-                  "0"
-                )}/${String(endDateFormat.getUTCDate()).padStart(
-                  2,
-                  "0"
-                )}/${String(endDateFormat.getUTCFullYear())} ${String(
-                  endDateFormat.getUTCHours()
-                ).padStart(2, "0")}:${String(
-                  endDateFormat.getUTCMinutes()
-                ).padStart(2, "0")}:${String(
-                  endDateFormat.getUTCSeconds()
-                ).padStart(2, "0")}`
+                (() => {
+                  const date = endDateFormat;
+                  return `${String(date.getUTCMonth() + 1).padStart(
+                    2,
+                    "0"
+                  )}/${String(date.getUTCDate()).padStart(
+                    2,
+                    "0"
+                  )}/${String(date.getUTCFullYear())} ${String(
+                    date.getUTCHours()
+                  ).padStart(2, "0")}:${String(
+                    date.getUTCMinutes()
+                  ).padStart(2, "0")}:${String(
+                    date.getUTCSeconds()
+                  ).padStart(2, "0")}`;
+                })()
               )}{" "}
               (UTC)
             </p>

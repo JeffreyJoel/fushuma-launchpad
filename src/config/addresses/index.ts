@@ -1,0 +1,1 @@
+export const LaunchpadContractAddress = "0xa9aB928D8C1A15d635C15f3C2b12909Bf14783B5";

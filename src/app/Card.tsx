@@ -1,75 +1,65 @@
 import { useEffect, useState } from "react";
-import { Launchpad } from "@/config/types/launchpadTypes";
 import Image from "next/image";
 import { nativeTokens } from "@/config/token-lists/nativeTokens";
-import multiChainSVG from "@/../public/images/launchpad-details/multiChain.svg";
-import { useReadContract, useAccount } from "wagmi";
-import { ERC20_ABI } from "@/config/abis/erc20";
-import { ICOcontract_ABI } from "@/config/abis/IcoContract";
 import { formatFloat } from "@/other/formatFloat";
 import { formatUnits } from "viem";
+import { useICOContract } from "@/hooks/useLaunchPad";
+import { useReadContract } from "wagmi";
+import { ERC20_ABI } from "@/config/abis/erc20";
+import { Address } from "@/config/types/launchpadTypes";
 
 interface Props {
-  children: Launchpad;
-  onClick: Function;
-  cardState: Function;
+  children: {
+    logo: string;
+    minDescription: string;
+    saleType: string;
+    chains: Record<number, {
+      tokenAddress: Address;
+      icoContract: Address;
+      currencies: {
+        useNativeAsPayment: boolean;
+        nativePrice: number;
+        tokens?: [{ token: { symbol: string; address: string }; price: number }];
+      };
+    }>;
+  };
+  onClick: (data: any) => void;
+  cardState: (data: { state: string; index: number }) => void;
   cardIndex: number;
+  icoId: bigint;
 }
 
-type currenciesList = {
-  useNativeAsPayment: boolean;
-  nativePrice: number;
-  tokens: [{ token: { symbol: string; address: string }; price: number }];
-};
-
-function Card({ children, onClick, cardState, cardIndex }: Props) {
-  // Vars used for funcs
-  let [timer, setTimer] = useState("Loading...");
-  let [dialogue, setDialogue] = useState("Starts in");
+function Card({ children, onClick, cardState, cardIndex, icoId }: Props) {
+  // UI states
   const [transformState, setTransformState] = useState("");
-  // Token/ICO info
-  const { chainId } = useAccount() as { chainId: number };
-  const [usedChainId, setUsedChainId] = useState(chainId);
-  let supportedChain = children.chains[usedChainId];
-  let tokenAddress = supportedChain.tokenAddress;
-  let icoContract = supportedChain.icoContract;
-  const [getlabelState, setLabelState] = useState("Live");
+  const [labelState, setLabelState] = useState("Loading");
   const [progress, setProgress] = useState(0);
-  const [startTime, setStartTime] = useState(0);
-  const [endTime, setEndTime] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
+  const [statusText, setStatusText] = useState("Loading...");
+  
+  // Since we're only using one chain, we'll get the first chain from the object
+  const chainKey = Object.keys(children.chains)[0] as unknown as number;
+  
+  // Launchpad specifics from props
+  const supportedChain = children.chains[chainKey];
+  const tokenAddress = supportedChain?.tokenAddress;
+  const icoContract = supportedChain?.icoContract;
+  
+  // Token details
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");
   const [decimals, setDecimals] = useState(0);
-  const [price, setPrice] = useState(0);
-  const saleType = children.saleType;
-  const chainInfo = nativeTokens[Number(usedChainId)];
-  const [currentCurrency, setCurrentCurrency] = useState("Loading...");
-  const [startDate, setStartDate] = useState(0);
-  const [currentSupply, setCurrentSupply] = useState(0);
-  const [tokensForSale, setTokensForSale] = useState(0);
-
-  const getExplorerTokenLink = () => {
-    switch (chainInfo.chainId) {
-      case 56:
-        return "https://bttcscan.com/token/";
-      case 820:
-        return "https://explorer.callisto.network/tokens/";
-      case 61:
-        return "https://etc.blockscout.com/token/";
-    }
-  };
-
-  const getExplorerContractLink = () => {
-    switch (chainInfo.chainId) {
-      case 199:
-        return "https://bttcscan.com/address/";
-      case 820:
-        return "https://explorer.callisto.network/address/";
-      case 61:
-        return "https://etc.blockscout.com/address/";
-    }
-  };
-
+  const [price, setPrice] = useState<string>("0");
+  const [currentCurrency, setCurrentCurrency] = useState("");
+  
+  // Chain info
+  const chainInfo = nativeTokens[Number(chainKey)];
+  
+  // Use the ICO Contract hook
+  const { useICODetails } = useICOContract();
+  const { data: icoData, isLoading: icoLoading } = useICODetails(icoId);
+  
+  // Read token details with proper error handling
   const { data: nameData } = useReadContract({
     abi: ERC20_ABI,
     address: tokenAddress,
@@ -88,17 +78,24 @@ function Card({ children, onClick, cardState, cardIndex }: Props) {
     functionName: "decimals",
   });
 
-  const { data: ICOinfo } = useReadContract({
-    abi: ICOcontract_ABI,
-    address: icoContract,
-    functionName: "getCurrentRound",
-  });
+  // Explorer links helpers
+  const getExplorerLink = (type: 'token' | 'contract', address: Address): string => {
+    const baseUrl = 
+      chainKey === 56 ? "https://bttcscan.com/" :
+      chainKey === 820 ? "https://explorer.callisto.network/" :
+      chainKey === 61 ? "https://etc.blockscout.com/" :
+      "";
+    
+    return `${baseUrl}${type === 'token' ? 'token' : 'address'}/${address}`;
+  };
 
-  // links
-  const explorerContract = getExplorerContractLink();
-  const explorerToken = getExplorerTokenLink();
+  // Format numbers with commas
+  const formatNumber = (num: number | undefined): string => {
+    if (num === undefined) return '0';
+    return new Intl.NumberFormat().format(num);
+  };
 
-  // Calls the function to get the current supply and load the animation of cards
+  // Card animation on mount
   useEffect(() => {
     setTimeout(() => {
       setTransformState("scale(1)");
@@ -108,215 +105,159 @@ function Card({ children, onClick, cardState, cardIndex }: Props) {
     };
   }, []);
 
+  // Set token details when data loads
   useEffect(() => {
-    if (nameData) {
-      setName(nameData);
-    }
-    if (symbolData) {
-      setSymbol(symbolData);
-    }
-    if (decimalsData) {
-      setDecimals(decimalsData);
-    }
+    if (nameData) setName(nameData as string);
+    if (symbolData) setSymbol(symbolData as string);
+    if (decimalsData) setDecimals(Number(decimalsData));
   }, [nameData, symbolData, decimalsData]);
 
+  // Set payment token and price
   useEffect(() => {
-    // Define start and end dates + tokensForSale from the data
-    if (ICOinfo) {
-      let info = ICOinfo as {
-        amount: bigint;
-        roundStarts: bigint;
-        totalSold: bigint;
-      };
-      setStartDate(Number(info.roundStarts));
-      setCurrentSupply(
-        Number(formatFloat(formatUnits(info.totalSold, decimals)))
-      );
-      setTokensForSale(Number(formatFloat(formatUnits(info.amount, decimals))));
-    }
-  }, [ICOinfo, decimals]);
-
-  // Define all the necessary variables from the launchpad object
-  const { logo, minDescription, endDate } = children as Launchpad;
-
-  useEffect(() => {
-    if (!children) return;
-    setStartTime(startDate);
-    setEndTime(Number(convertDateTimeStringToMilliseconds(endDate)));
+    if (!supportedChain) return;
+    
     if (supportedChain.currencies.useNativeAsPayment) {
-      setCurrentCurrency(String(chainInfo.symbol));
-      setPrice(supportedChain.currencies.nativePrice);
-    } else {
-      const { tokens } = supportedChain.currencies as currenciesList;
-      setCurrentCurrency(String(tokens[0].token.symbol));
-      setPrice(tokens[0].price);
+      setCurrentCurrency(String(chainInfo?.symbol || "ETH"));
+      setPrice(formatNumber(supportedChain.currencies.nativePrice));
+    } else if (supportedChain.currencies.tokens?.[0]) {
+      const token = supportedChain.currencies.tokens[0];
+      setCurrentCurrency(token.token.symbol);
+      setPrice(formatNumber(token.price));
     }
-  }, [
-    children,
-    startDate,
-    endDate,
-    chainInfo.symbol,
-    supportedChain.currencies,
-  ]);
+  }, [supportedChain, chainInfo]);
 
-  //  Starts the timer
+  // Track the previous label state to avoid repeated cardState calls
+  const [prevLabelState, setPrevLabelState] = useState<string | null>(null);
+
+  // Process ICO data and update timer
   useEffect(() => {
-    // The function that updates the timer
-    const timerUpdater = () => {
-      let current = Date.now();
-      let timerInMs = startTime - current;
-      if (timerInMs < 0 && dialogue !== "Ended") {
-        timerInMs = endTime - current;
-        setDialogue("Ends in");
-        setLabelState("Live");
-        cardState({ state: "Live", index: cardIndex });
-      } else if (timerInMs > 0) {
-        setLabelState("Soon");
-        cardState({ state: "Soon", index: cardIndex });
+    if (!icoLoading && icoData && decimals > 0) {
+      const { state, params } = icoData;
+      
+      // Calculate progress
+      const totalTokens = Number(formatFloat(formatUnits(params.amount, decimals)));
+      const soldTokens = Number(formatFloat(formatUnits(state.totalSold, decimals)));
+      const progressPercentage = Math.min(Math.floor((soldTokens / totalTokens) * 100), 100);
+      setProgress(progressPercentage);
+      
+      // Determine ICO status
+      const now = Math.floor(Date.now() / 1000);
+      const startTime = Number(params.startDate);
+      const endTime = Number(params.endDate);
+      
+      let newLabelState = "";
+      
+      if (state.isClosed || (progressPercentage >= 100)) {
+        newLabelState = "Ended";
+        setLabelState(newLabelState);
+        setStatusText("Completed");
+        setTimeRemaining(null);
+      } else if (now < startTime) {
+        newLabelState = "Soon";
+        setLabelState(newLabelState);
+        setStatusText("Starts in");
+      } else if (now >= startTime && (endTime === 0 || now < endTime)) {
+        newLabelState = "Live";
+        setLabelState(newLabelState);
+        setStatusText("Ends in");
+      } else {
+        newLabelState = "Ended";
+        setLabelState(newLabelState);
+        setStatusText("Completed");
+        setTimeRemaining(null);
       }
-      let days = String(Math.floor(timerInMs / (1000 * 60 * 60 * 24))).padStart(
-        2,
-        "0"
-      );
-      let hours = String(
-        Math.floor((timerInMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-      ).padStart(2, "0");
-      let minutes = String(
-        Math.floor((timerInMs % (1000 * 60 * 60)) / (1000 * 60))
-      ).padStart(2, "0");
-      if (current <= endTime) {
-        if (Number(days) > 0) {
-          setTimer(`${days} Day(s) and ${hours} Hour(s)`);
-        } else if (Number(days) == 0 && Number(hours) > 0) {
-          setTimer(`${hours} Hour(s) and ${minutes} Minute(s)`);
-        } else if (Number(days) == 0 && Number(hours) == 0) {
-          setTimer(`${minutes} Minute(s)`);
+      
+      // Only notify parent if state has changed
+      if (prevLabelState !== newLabelState) {
+        setPrevLabelState(newLabelState);
+        cardState({ state: newLabelState, index: cardIndex });
+      }
+      
+      // Update remaining time
+      const updateRemainingTime = () => {
+        const now = Math.floor(Date.now() / 1000);
+        let remainingSeconds;
+        
+        if (now < startTime) {
+          remainingSeconds = startTime - now;
+        } else if (endTime > 0 && now < endTime) {
+          remainingSeconds = endTime - now;
+        } else {
+          setTimeRemaining(null);
+          return;
         }
-      } else {
-        setTimer("");
-        setDialogue("Ended");
-        setLabelState("Ended");
-        cardState({ state: "Ended", index: cardIndex });
-      }
-      if (
-        currentSupply === tokensForSale &&
-        currentSupply != 0 &&
-        tokensForSale != 0
-      ) {
-        setTimer("");
-        setDialogue("Ended");
-        setLabelState("Ended");
-        cardState({ state: "Ended", index: cardIndex });
-      }
-    };
-    if (endTime) {
-      if (isNaN(Math.floor((currentSupply * 100) / tokensForSale))) {
-        setProgress(100);
-      } else {
-        setProgress(Math.floor((currentSupply * 100) / tokensForSale));
-      }
-      timerUpdater();
-      const timerInterval = setInterval(timerUpdater, 60000);
-      return () => clearInterval(timerInterval);
+        
+        // Format time remaining
+        const days = Math.floor(remainingSeconds / 86400);
+        const hours = Math.floor((remainingSeconds % 86400) / 3600);
+        const minutes = Math.floor((remainingSeconds % 3600) / 60);
+        
+        if (days > 0) {
+          setTimeRemaining(`${days} Day(s) and ${hours} Hour(s)`);
+        } else if (hours > 0) {
+          setTimeRemaining(`${hours} Hour(s) and ${minutes} Minute(s)`);
+        } else {
+          setTimeRemaining(`${minutes} Minute(s)`);
+        }
+      };
+      
+      updateRemainingTime();
+      const interval = setInterval(updateRemainingTime, 60000);
+      return () => clearInterval(interval);
     }
-  }, [tokensForSale, currentSupply, startTime, endTime, cardIndex]);
+  }, [icoData, icoLoading, decimals, cardIndex, cardState, prevLabelState]);
 
-  // Adds commas to any number (10000 = 10,000)
-  const addComma = (originalNum: number) => {
-    let num = String(originalNum);
-    let total = num.length % 3;
-    let whereIsLastComma;
-    if (num.length > 3) {
-      if (total !== 0) {
-        num = num.slice(0, total) + "," + num.slice(total, num.length);
-        whereIsLastComma = total;
-      } else {
-        num = num.slice(0, 3) + "," + num.slice(3, num.length);
-        whereIsLastComma = 3;
-      }
-      let left = (num.length - 2) / 3 - 1;
-      for (let i = 1; i <= left; i++) {
-        num =
-          num.slice(0, whereIsLastComma + 4) +
-          "," +
-          num.slice(whereIsLastComma + 4, num.length);
-        whereIsLastComma = whereIsLastComma + 4;
-      }
-    }
-    return num;
-  };
-
-  const sendDataToPage = () => {
+  // Send data to details page
+  const handleViewDetails = () => {
     onClick({
-      launchpad: children,
-      name: name,
-      symbol: symbol,
-      decimals: decimals,
+      ico: icoData,
+      name,
+      symbol,
+      decimals,
+      tokenAddress
     });
   };
 
-  // Convert the time to ms
-  const convertDateTimeStringToMilliseconds = (dateTimeString: string) => {
-    if (dateTimeString) {
-      const [dateString, timeString] = dateTimeString.split(" ");
-      const [day, month, year] = dateString.split("/").map(Number);
-      const [hours, minutes] = timeString.split(":").map(Number);
-      const date = Date.UTC(year, month - 1, day, hours, minutes);
-      return date;
-    }
-  };
-
-  // Used to determine the class of the timer based on its state (ended or not)
-  const timerStylesCondition = () => {
-    return dialogue === "Ended" ? "ended" : "";
-  };
-
-  // The main element
-  const element = (
+  // Render card
+  return (
     <li
-      className={`launchpad launchpad-${getlabelState.toLowerCase()}`}
+      className={`launchpad launchpad-${labelState.toLowerCase()}`}
       style={{ transform: transformState }}
     >
-      <div className={`state-label state-label-${getlabelState.toLowerCase()}`}>
+      {/* Status Label */}
+      <div className={`state-label state-label-${labelState.toLowerCase()}`}>
         <div className="marker"></div>
-        <p>{getlabelState}</p>
+        <p>{labelState}</p>
       </div>
-      <h3
-        className={Object.keys(children.chains).length == 2 ? "two-chains" : ""}
-      >
-        <img width={"61px"} src={logo} alt="logo" />
-        <Image
+
+      {/* Header with Token Info */}
+      <h3 className={Object.keys(children.chains).length === 2 ? "two-chains" : ""}>
+        {/* <img width="61" src={children.logo} alt={`${symbol || 'Token'} logo`} /> */}
+        
+        {/* Chain Icon */}
+        {/* <Image
           className="chainLogo"
-          src={
-            Object.keys(children.chains).length > 2
-              ? multiChainSVG.src
-              : nativeTokens[Number(Object.keys(children.chains)[0])].logoURI
-          }
+          src={nativeTokens[Number(chainKey)]?.logoURI || '/default-chain.png'}
           width={26}
           height={26}
           alt="chain"
-        />
-        {Object.keys(children.chains).length == 2 ? (
-          <Image
-            className="chainLogo second-chain"
-            src={nativeTokens[Number(Object.keys(children.chains)[1])].logoURI}
-            width={26}
-            height={26}
-            alt="chain"
-          />
-        ) : null}
-        {name} <span>({symbol})</span>
+        /> */}
+        
+        {/* Token Name and Price */}
+        {name || 'Unknown Token'} <span>({symbol || '???'})</span>
         <p>
-          1 {currentCurrency} = {addComma(Number(price))} {symbol}
+          1 {currentCurrency || 'ETH'} = {price || '0'} {symbol || '???'}
         </p>
       </h3>
+      
+      {/* Progress Section */}
       <br />
       <b>Completion ({progress}%)</b>
       <div
-        className={`state-label state-label-responsive state-label-${getlabelState.toLowerCase()}`}
+        className={`state-label state-label-responsive state-label-${labelState.toLowerCase()}`}
       >
         <div className="marker"></div>
-        <p>{getlabelState}</p>
+        <p>{labelState}</p>
       </div>
       <br />
       <div className="progress-bar">
@@ -324,51 +265,66 @@ function Card({ children, onClick, cardState, cardIndex }: Props) {
           <div className="white-flash"></div>
         </div>
       </div>
+      
+      {/* Description */}
       <br />
-      <em>{minDescription}</em>
+      <em>{children.minDescription}</em>
+      
+      {/* Token Address */}
       <p style={{ marginTop: "21px" }}>
         <b className="launchpad-link-title">Token Address </b>
-        <a
-          target="_blank"
-          href={`${explorerToken}${tokenAddress}`}
-          className="inline-flex items-center gap-1 relative after:absolute after:left-0 after:w-0 after:h-[1px] after:block after:bg-green after:bottom-0 after:duration-300 hover:after:w-full"
-        >
-          {tokenAddress}{" "}
-          <svg style={{ width: "20px", height: "20px" }}>
-            <use href="/sprite.svg#arrow-popup"></use>
-          </svg>
-        </a>
+        {tokenAddress ? (
+          <a
+            target="_blank"
+            href={getExplorerLink('token', tokenAddress)}
+            className="inline-flex items-center gap-1 relative after:absolute after:left-0 after:w-0 after:h-[1px] after:block after:bg-green after:bottom-0 after:duration-300 hover:after:w-full"
+          >
+            {tokenAddress}{" "}
+            <svg style={{ width: "20px", height: "20px" }}>
+              <use href="/sprite.svg#arrow-popup"></use>
+            </svg>
+          </a>
+        ) : (
+          <span>Not available</span>
+        )}
       </p>
+      
+      {/* Contract Address */}
       <p style={{ marginTop: "20px" }}>
-        <b className="launchpad-link-title">{saleType} Contract </b>
-        <a
-          target="_blank"
-          href={`${explorerContract}${icoContract}`}
-          className="inline-flex items-center gap-1 relative after:absolute after:left-0 after:w-0 after:h-[1px] after:block after:bg-green after:bottom-0 after:duration-300 hover:after:w-full"
-        >
-          {icoContract}{" "}
-          <svg style={{ width: "20px", height: "20px" }}>
-            <use href="/sprite.svg#arrow-popup"></use>
-          </svg>
-        </a>
+        <b className="launchpad-link-title">{children.saleType} Contract </b>
+        {icoContract ? (
+          <a
+            target="_blank"
+            href={getExplorerLink('contract', icoContract)}
+            className="inline-flex items-center gap-1 relative after:absolute after:left-0 after:w-0 after:h-[1px] after:block after:bg-red after:bottom-0 after:duration-300 hover:after:w-full"
+          >
+            {icoContract}{" "}
+            <svg style={{ width: "20px", height: "20px" }}>
+              <use href="/sprite.svg#arrow-popup"></use>
+            </svg>
+          </a>
+        ) : (
+          <span>Not available</span>
+        )}
       </p>
+      
+      {/* Details Button */}
       <br />
       <button
-        onClick={sendDataToPage}
-        className="h-10 rounded-25 px-6 font-medium border border-green duration-200 flex items-center gap-1 justify-center disabled:bg-transparent disabled:text-grey-light disabled:border-grey-light text-primary-text bg-transparent hover:bg-green/20 false false"
+        onClick={handleViewDetails}
+        className="h-10 rounded-25 px-6 font-medium border border-red duration-200 flex items-center gap-1 justify-center disabled:bg-transparent disabled:text-grey-light disabled:border-grey-light text-primary-text bg-transparent hover:bg-red/20 false false"
       >
         Details
       </button>
-      <p className={`timer ${timerStylesCondition()}`}>
-        {dialogue === "Ended" ? null : dialogue + ":"}
+      
+      {/* Timer Display */}
+      <p className={`timer ${!timeRemaining ? "ended" : ""}`}>
+        {!timeRemaining ? null : `${statusText}:`}
         <br />
-        <b>{dialogue === "Ended" ? "Completed." : timer}</b>
+        <b>{!timeRemaining ? "Completed." : timeRemaining}</b>
       </p>
     </li>
   );
-
-  // Delete the card 60d after completion
-  return Date.now() < endTime + 60 * 24 * 60 * 60 * 1000 ? element : null;
 }
 
 export default Card;

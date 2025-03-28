@@ -5,225 +5,238 @@ import PageCard from "@/components/PageCard";
 import Preloader from "@/components/atoms/Preloader";
 import Card from "./Card";
 import Details from "./Details";
-import { launchpads } from "@/config/launchpad/launchpads";
-import { Launchpad, ChainDetails } from "@/config/types/launchpadTypes";
-import { nativeTokens } from "@/config/token-lists/nativeTokens";
-import SelectChain from "./launchpads/SelectChain";
+import { Address, ICODetails } from "@/config/types/launchpadTypes";
 import { useAccount } from "wagmi";
-import addToast from "@/other/toast";
+import { fetchAllICOs } from "@/helpers/launchpadFunctions"; 
 
-type LaunchpadData = {
+export interface Launchpad {
+  logo: string;
+  minDescription: string;
+  saleType: string;
+  chains: Record<
+    number,
+    {
+      tokenAddress: Address;
+      icoContract: Address;
+      currencies: {
+        useNativeAsPayment: boolean;
+        nativePrice: number;
+        tokens?: [
+          { token: { symbol: string; address: string }; price: number }
+        ];
+      };
+    }
+  >;
+}
+
+interface LaunchpadItem {
   launchpad: Launchpad;
-  name: string;
-  symbol: string;
-  decimals: number;
-};
+  icoId: bigint;
+}
 
-type cardState = {
+type CardState = {
   index: number;
   state: string;
 };
 
 export default function LaunchpadPage() {
   const { chainId } = useAccount() as { chainId: number };
-  const [details, setDetails] = useState<LaunchpadData | null>();
+  const [details, setDetails] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorOccurred, setErrorOccurred] = useState<boolean>(false);
-  const [cardData, setCardData] = useState<LaunchpadData>();
-  const [selectedChain, setSelectedChain] = useState(0);
-  const [selectedCards, setSelectedCards] = useState<Launchpad[]>([]);
-  const [cardsState, setCardsState] = useState<cardState[]>([]);
+  const [launchpads, setLaunchpads] = useState<LaunchpadItem[]>([]);
+  const [cardsState, setCardsState] = useState<CardState[]>([]);
 
+  // Load ICOs using the new function.
   useEffect(() => {
-    if (selectedChain === 0) {
-      setCardsState([]);
-      setSelectedCards([]);
-    }
-  }, [selectedChain]);
+    async function loadICOs() {
+      try {
+        const icos: ICODetails[] = await fetchAllICOs();
 
-  useEffect(() => {
-    if (
-      launchpads &&
-      selectedChain !== 0 &&
-      Object.keys(launchpads).length > 0
-    ) {
-      let cards = [] as Launchpad[];
-      for (const launchpad of Object.values(launchpads)) {
-        const dataToBePushed = {
-          launchpad: launchpad as Launchpad,
-        };
-        cards.push(dataToBePushed.launchpad);
-      }
-      const sortedKeys = cards.filter((card) => selectedChain in card.chains);
-      setSelectedCards([...sortedKeys]);
-      setLoading(true);
-    } else if (launchpads) {
-      setLoading(false);
-    }
-  }, [selectedChain]);
-
-  useEffect(() => {
-    // Detects if there are cards or no
-    const fetchLaunchpads = async () => {
-      const updatedLiveList: Launchpad[] = [];
-      const updatedSoonList: Launchpad[] = [];
-      const updatedEndedList: Launchpad[] = [];
-
-      for (const launchpad of Object.values(selectedCards)) {
-        try {
-          const dataToBePushed = {
-            launchpad: launchpad as Launchpad,
+        const transformedLaunchpads = icos.map((ico) => {
+          const isNativePayment =
+            ico.params.paymentToken ===
+            "0x0000000000000000000000000000000000000000";
+          const chainConfig: Record<
+            number,
+            {
+              tokenAddress: Address;
+              icoContract: Address;
+              currencies: {
+                useNativeAsPayment: boolean;
+                nativePrice: number;
+                tokens?: [
+                  { token: { symbol: string; address: string }; price: number }
+                ];
+              };
+            }
+          > = {
+            [chainId]: {
+              tokenAddress: ico.params.token,
+              icoContract: ico.state.ICOOwner, 
+              currencies: {
+                useNativeAsPayment: isNativePayment,
+                nativePrice: Number(ico.params.startPrice),
+              },
+            },
           };
-          const state = cardsState.find(
-            (card) =>
-              card.index === Object.values(selectedCards).indexOf(launchpad)
-          )?.state;
+
+          if (!isNativePayment) {
+            chainConfig[chainId].currencies.tokens = [
+              {
+                token: {
+                  symbol: "TOKEN", 
+                  address: ico.params.paymentToken,
+                },
+                price: Number(ico.params.startPrice),
+              },
+            ];
+          }
+
+          return {
+            launchpad: {
+              logo: "/default-logo.png",
+              minDescription: "Participate in this token sale",
+              saleType: "ICO",
+              chains: chainConfig,
+            },
+            icoId: ico.id,
+          } as LaunchpadItem;
+        });
+        setLaunchpads(transformedLaunchpads);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error occurred while fetching ICOs:", error);
+        setErrorOccurred(true);
+        setLoading(false);
+      }
+    }
+    loadICOs();
+  }, [chainId]);
+
+  // Categorize cards based on their state.
+  useEffect(() => {
+    async function categorizeByState() {
+      const updatedLiveList: LaunchpadItem[] = [];
+      const updatedSoonList: LaunchpadItem[] = [];
+      const updatedEndedList: LaunchpadItem[] = [];
+
+      for (let i = 0; i < launchpads.length; i++) {
+        const launchpad = launchpads[i];
+        try {
+          const state = cardsState.find((card) => card.index === i)?.state;
           switch (state) {
             case "Soon":
-              updatedSoonList.push(dataToBePushed.launchpad);
+              updatedSoonList.push(launchpad);
               break;
             case "Live":
-              updatedLiveList.push(dataToBePushed.launchpad);
+              updatedLiveList.push(launchpad);
               break;
             case "Ended":
-              updatedEndedList.push(dataToBePushed.launchpad);
+              updatedEndedList.push(launchpad);
               break;
             default:
               break;
           }
         } catch (err) {
-          setLoading(false);
-          setErrorOccurred(true);
-          console.error("Error occurred while fetching launchpad:", err);
+          console.error(
+            "Error occurred while processing launchpad state:",
+            err
+          );
         }
       }
-      const cardList = updatedLiveList.concat(
-        updatedSoonList,
-        updatedEndedList
-      );
-      const sortedKeys = cardList.filter(
-        (card) => selectedChain in card.chains
-      );
-      setSelectedCards(sortedKeys);
-      setLoading(false);
-    };
-    if (
-      selectedChain &&
-      cardsState.length === Object.keys(selectedCards).length
-    ) {
-      try {
-        setLoading(true);
-        fetchLaunchpads();
-      } catch (err) {
-        setLoading(false);
-        setErrorOccurred(true);
-        console.error("Error occurred in useEffect:", err);
+
+      const sortedLaunchpads = [
+        ...updatedLiveList,
+        ...updatedSoonList,
+        ...updatedEndedList,
+      ];
+
+      if (sortedLaunchpads.length > 0) {
+        setLaunchpads(sortedLaunchpads);
       }
     }
-  }, [cardsState, details]);
 
-  useEffect(() => {
-    setDetails(cardData);
-  }, [cardData]);
+    if (cardsState.length === launchpads.length && launchpads.length > 0) {
+      try {
+        categorizeByState();
+      } catch (err) {
+        setErrorOccurred(true);
+        console.error("Error occurred in card state processing:", err);
+      }
+    }
+  }, [cardsState, launchpads.length]);
 
   const detailsClickHandler = () => {
-    if (chainId == selectedChain) {
-      setDetails(null);
-    } else {
-      setSelectedChain(0);
-      addToast("Chain change detected. Please select again.", "info");
-      setDetails(null);
-    }
+    setDetails(null);
   };
 
-  const handleDataFromCard = (data: LaunchpadData) => {
-    setCardData(data);
+  const handleDataFromCard = (data: any) => {
+    setDetails(data);
   };
 
-  const handleCardState = (state: cardState) => {
-    const listOfStates = cardsState;
+  const handleCardState = (state: CardState) => {
+    const listOfStates = [...cardsState];
     listOfStates[state.index] = state;
-    setCardsState([...listOfStates]);
+    setCardsState(listOfStates);
   };
 
-  const container = (
-    <PageCard>
-      <div
-        style={{ margin: "100px auto", display: `${loading ? "" : "none"}` }}
-      >
-        <Preloader />
-      </div>
-      <div style={{ display: `${loading ? "none" : ""}` }}>
-        <p
-          className="launchpads-list-return"
-          onClick={() => setSelectedChain(0)}
-        >
-          Return
-        </p>
-        <h2 className="launchpad-list-heading">
-          Launchpads on{" "}
-          {chainId && nativeTokens[chainId]
-            ? nativeTokens[chainId].name
-            : "Loading..."}
-        </h2>
-        <ul className="launchpads-list" style={{ margin: "0 auto" }}>
-          {selectedCards.map((launchpadData, index) => {
-            const launchpad = launchpadData;
-            const firstSupportedChainKey = Object.keys(launchpad.chains)[0];
-            return (
+  const renderContent = () => {
+    if (errorOccurred) {
+      return (
+        <PageCard>
+          <p>
+            An error occurred while loading the launchpads. Please refresh the
+            page.
+          </p>
+        </PageCard>
+      );
+    }
+
+    if (loading) {
+      return (
+        <PageCard>
+          <div style={{ margin: "100px auto" }}>
+            <Preloader />
+          </div>
+        </PageCard>
+      );
+    }
+
+    if (details) {
+      return <Details onClick={detailsClickHandler}>{details}</Details>;
+    }
+
+    return (
+      <PageCard>
+        <h2 className="launchpad-list-heading mt-0">Available Launchpads</h2>
+        {launchpads.length > 0 ? (
+          <ul className="launchpads-list" style={{ margin: "0 auto" }}>
+            {launchpads.map((item, index) => (
               <Card
-                key={`Card.${launchpad.chains[firstSupportedChainKey].tokenAddress}`}
+                key={`Card.${item.launchpad?.chains[chainId]?.tokenAddress}`}
                 onClick={handleDataFromCard}
                 cardState={handleCardState}
                 cardIndex={index}
+                icoId={item.icoId}
               >
-                {launchpad}
+                {item.launchpad}
               </Card>
-            );
-          })}
-        </ul>
-      </div>
-    </PageCard>
-  );
-  return (
-    <div
-      className={
-        !loading && !errorOccurred && selectedChain ? "" : "no-launchpads"
-      }
-    >
-      <Container>
-        {errorOccurred ? (
-          <PageCard>
-            <p>
-              An error occured while loading the cards, please refresh the page.
-            </p>
-          </PageCard>
+            ))}
+          </ul>
         ) : (
-          <div className="w-full mx-auto my-5">
-            {selectedChain ? (
-              details ? (
-                <Details onClick={() => detailsClickHandler()}>
-                  {details}
-                </Details>
-              ) : (
-                container
-              )
-            ) : (
-              <PageCard>
-                {loading ? (
-                  <div style={{ margin: "100px auto" }}>
-                    <Preloader />
-                  </div>
-                ) : (
-                  <SelectChain
-                    supportedChains={nativeTokens}
-                    setChain={setSelectedChain}
-                  ></SelectChain>
-                )}
-              </PageCard>
-            )}
-          </div>
+          <p className="text-center py-8">
+            No active launchpads available at the moment.
+          </p>
         )}
+      </PageCard>
+    );
+  };
+
+  return (
+    <div className={!loading && !errorOccurred ? "" : "no-launchpads"}>
+      <Container>
+        <div className="w-full mx-auto my-5">{renderContent()}</div>
       </Container>
     </div>
   );

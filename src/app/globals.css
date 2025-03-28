@@ -408,9 +408,8 @@ p, h1, h2, h3, span {
 .launchpad-list-heading {
     text-align: center;
     margin-bottom: 45px;
-    margin-top: -36px;
     font-size: 21px;
-    color: #7bb719;
+    color: rgb(var(--red));
     font-weight: 600;
 }
 
@@ -525,7 +524,7 @@ p, h1, h2, h3, span {
 }
 
 .launchpad h3 span {
-    color: #7cb819;
+    color: rgb(var(--red));
 }
 
 .launchpad h3 img {
@@ -549,8 +548,8 @@ p, h1, h2, h3, span {
 }
 
 .launchpad-live img {
-    border: 1px solid #7cb819;
-    box-shadow: 0 0 5px #7cb819;
+    border: 1px solid rgb(var(--red));
+    box-shadow: 0 0 5px rgb(var(--red));
 }
 
 .launchpad-soon img {
@@ -596,10 +595,10 @@ p, h1, h2, h3, span {
 .progress-bar .colored-part {
     overflow: hidden;
     height: 100%;
-    background: #7cb819;
+    background: rgb(var(--red));
     margin-top: 14px;
     border-radius: 5px;
-    box-shadow: 0 0 4px #7cb819;
+    box-shadow: 0 0 4px rgb(var(--red));
     position: relative;
     max-width: 100%;
 }
@@ -652,7 +651,7 @@ p, h1, h2, h3, span {
     transition: all ease .3s;
     font-weight: 400;
     font-size: 15px;
-    color: #7cb819;
+    color: rgb(var(--red));
 }
 
 .launchpad a svg {
@@ -678,7 +677,7 @@ p, h1, h2, h3, span {
 }
 
 .launchpad button {
-    background: rgb(var(--green));
+    background: rgb(var(--red));
     border: none;
     padding: 7px 21px;
     float: right;
@@ -731,7 +730,7 @@ p, h1, h2, h3, span {
 
 .ICO-launchpad .go-back-btn:hover {
     transition: all ease .3s;
-    background: rgb(var(--green) / 0.3);
+    background: rgb(var(--red) / 0.3);
 }
 
 .ICO-launchpad-no-media button {
@@ -794,7 +793,7 @@ p, h1, h2, h3, span {
 }
 
 .ICO-launchpad h1 a:hover {
-    color: #7cb819;
+    color: rgb(var(--red));
 }
 
 .ICO-launchpad h1 div svg {
@@ -811,7 +810,7 @@ p, h1, h2, h3, span {
 .ICO-launchpad h2 {
     text-align: center;
     margin-bottom: 35px;
-    color: #7cb819;
+    color: rgb(var(--red));
     font-size: 23px;
     font-weight: bolder;
 }
