@@ -8,11 +8,10 @@ import { LaunchpadContractAddress } from '@/config/addresses';
 
 export function useICOContract() {
 
-
-  const readContract = (functionName: string, args: any[] = []) =>
+  const ReadContract = (functionName: string, args: any[] = []) =>
     useReadContract({ address: LaunchpadContractAddress, abi: Launchpad_ABI, functionName, args });
 
-  const writeContract = (functionName: string, args: any[], value?: bigint) => {
+  const WriteContract = (functionName: string, args: any[], value?: bigint) => {
     const { writeContract, isPending, isSuccess, error, data } = useWriteContract();
     
     const handleWrite = async () => {
@@ -34,7 +33,7 @@ export function useICOContract() {
     };
   };
 
-  const getCounter = () => readContract('counter');
+  const getCounter = () => ReadContract('counter');
   
   // Function to fetch all ICOs
   const useAllICOs = () => {
@@ -74,7 +73,7 @@ export function useICOContract() {
   };
   
   const fetchICODetails = async (icoId: bigint): Promise<ICODetails> => {
-    const { data } = await readContract('getICO', [icoId]);
+    const { data } = await ReadContract('getICO', [icoId]);
     if (!data) throw new Error(`Failed to fetch ICO ${icoId.toString()}`);
     
     const [params, state] = data as [ICOParams, ICOState];
@@ -88,7 +87,7 @@ export function useICOContract() {
 
   // Get ICO details by ID
   const useICODetails = (icoId: bigint) => {
-    const { data, isLoading, error } = readContract('getICO', [icoId]);
+    const { data, isLoading, error } = ReadContract('getICO', [icoId]);
     
     const formattedData = data ? {
       id: icoId,
@@ -101,10 +100,10 @@ export function useICOContract() {
 
   return {
     // Read functions
-    getICOParams: (icoId: bigint) => readContract('icoParams', [icoId]),
-    getICOState: (icoId: bigint) => readContract('icoState', [icoId]),
+    getICOParams: (icoId: bigint) => ReadContract('icoParams', [icoId]),
+    getICOState: (icoId: bigint) => ReadContract('icoState', [icoId]),
     getTokenValue: (icoId: bigint, amount: bigint) => {
-      const { data, isLoading, error } = readContract('getValue', [icoId, amount]);
+      const { data, isLoading, error } = ReadContract('getValue', [icoId, amount]);
       const formattedData = data ? {
         availableAmount: (data as any)[0] as bigint,
         value: (data as any)[1] as bigint
@@ -112,16 +111,16 @@ export function useICOContract() {
       
       return { data: formattedData, isLoading, error };
     },
-    getVestingContract: (token: Address) => readContract('vestingContracts', [token]),
+    getVestingContract: (token: Address) => ReadContract('vestingContracts', [token]),
     getCounter,
     useICODetails,
     useAllICOs,
     
     // Write functions
-    useCreateICO: (params: ICOParams) => writeContract('createICO', [params]),
+    useCreateICO: (params: ICOParams) => WriteContract('createICO', [params]),
     useBuyToken: (icoId: bigint, amount: bigint, buyer: Address, value?: bigint) =>
-      writeContract('buyToken', [icoId, amount, buyer], value),
-    useCloseICO: (icoId: bigint) => writeContract('closeICO', [icoId]),
+      WriteContract('buyToken', [icoId, amount, buyer], value),
+    useCloseICO: (icoId: bigint) => WriteContract('closeICO', [icoId]),
     
   };
 }

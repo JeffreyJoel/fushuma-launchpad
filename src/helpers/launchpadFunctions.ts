@@ -213,7 +213,7 @@ export const ICOContract = {
  * These hooks should only be used inside React components.
  */
 export function useLaunchpadContract() {
-  const readContractHook = (functionName: string, args: any[] = []) =>
+  const ReadContractHook = (functionName: string, args: any[] = []) =>
     useReadContract({
       address: LaunchpadContractAddress,
       abi: Launchpad_ABI,
@@ -221,7 +221,7 @@ export function useLaunchpadContract() {
       args,
     });
 
-  const writeContractHook = (functionName: string, args: any[], value?: bigint) => {
+  const WriteContractHook = (functionName: string, args: any[], value?: bigint) => {
     const { writeContractAsync, isPending, isSuccess, error, data } = useWriteContract();
     
     const handleWrite = async () => {
@@ -251,7 +251,7 @@ export function useLaunchpadContract() {
   // Hook to get all ICOs
   const useAllICOs = () => {
     const { data: counterData, isLoading: counterLoading, error: counterError } = 
-      readContractHook('counter');
+      ReadContractHook('counter');
     const [icos, setIcos] = useState<ICODetails[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -286,7 +286,7 @@ export function useLaunchpadContract() {
 
   // Hook to get ICO details by ID
   const useICODetails = (icoId: bigint) => {
-    const { data, isLoading, error } = readContractHook('getICO', [icoId]);
+    const { data, isLoading, error } = ReadContractHook('getICO', [icoId]);
     
     const formattedData = data ? {
       id: icoId,
@@ -309,10 +309,10 @@ export function useLaunchpadContract() {
 
   return {
     // Read hooks
-    getICOParams: (icoId: bigint) => readContractHook('icoParams', [icoId]),
-    getICOState: (icoId: bigint) => readContractHook('icoState', [icoId]),
+    getICOParams: (icoId: bigint) => ReadContractHook('icoParams', [icoId]),
+    getICOState: (icoId: bigint) => ReadContractHook('icoState', [icoId]),
     getTokenValue: (icoId: bigint, amount: bigint) => {
-      const { data, isLoading, error } = readContractHook('getValue', [icoId, amount]);
+      const { data, isLoading, error } = ReadContractHook('getValue', [icoId, amount]);
       
       const formattedData = data ? {
         availableAmount: (data as any)[0] as bigint,
@@ -321,16 +321,16 @@ export function useLaunchpadContract() {
       
       return { data: formattedData, isLoading, error };
     },
-    getVestingContract: (token: Address) => readContractHook('vestingContracts', [token]),
-    getCounter: () => readContractHook('counter'),
+    getVestingContract: (token: Address) => ReadContractHook('vestingContracts', [token]),
+    getCounter: () => ReadContractHook('counter'),
     useICODetails,
     useAllICOs,
     useICOEvents,
     
     // Write hooks
-    useCreateICO: (params: ICOParams) => writeContractHook('createICO', [params]),
+    useCreateICO: (params: ICOParams) => WriteContractHook('createICO', [params]),
     useBuyToken: (icoId: bigint, amount: bigint, buyer: Address, value?: bigint) =>
-      writeContractHook('buyToken', [icoId, amount, buyer], value),
-    useCloseICO: (icoId: bigint) => writeContractHook('closeICO', [icoId]),
+      WriteContractHook('buyToken', [icoId, amount, buyer], value),
+    useCloseICO: (icoId: bigint) => WriteContractHook('closeICO', [icoId]),
   };
 }
